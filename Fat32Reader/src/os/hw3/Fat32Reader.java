@@ -8,7 +8,6 @@ import java.util.logging.Logger;
  *   Name of program: Fat32Reader
  *   Authors: David Mandelbaum
  *   Description: a program that supports file system commands (from specs)
- *   logging help from: http://www.vogella.com/tutorials/Logging/article.html
  *   **********************************************************/
 public class Fat32Reader {
 
@@ -126,7 +125,7 @@ public class Fat32Reader {
 //        BPB_RsvdSecCnt
 //        BPB_NumFATS
 //        BPB_FATSz32
-        //convert to hex: Integer.toHexString();//https://stackoverflow.com/a/26738067
+        //convert to hex: Integer.toHexString();
 
     }
 
