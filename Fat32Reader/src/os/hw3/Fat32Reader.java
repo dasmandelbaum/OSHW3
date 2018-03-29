@@ -1,7 +1,10 @@
 package os.hw3;
 
+import java.io.IOException;
 import java.util.Scanner;
+import java.util.logging.FileHandler;
 import java.util.logging.Level;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 /************************************************************
@@ -12,13 +15,17 @@ import java.util.logging.Logger;
 public class Fat32Reader {
 
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+    FileHandler fh;
 
-    public Fat32Reader()
+    public Fat32Reader() throws IOException
     {
+        //if dont want console print (ugly): LogManager.getLogManager().reset();//https://stackoverflow.com/a/3363747
         LOGGER.setLevel(Level.INFO);
+        fh = new FileHandler("fat32.log");
+        LOGGER.addHandler(fh);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Fat32Reader fr = new Fat32Reader();
         /* Parse args and open our image file */
 
@@ -143,7 +150,7 @@ public class Fat32Reader {
         }
         else
         {
-            LOGGER.warning("File " + fName + " is closed or does not exist.");
+            LOGGER.log(Level.WARNING, "File " + fName + " is closed or does not exist.");
         }
     }
 
@@ -160,7 +167,7 @@ public class Fat32Reader {
         }
         else
         {
-            LOGGER.warning("File " + fName + " is already closed.");
+            LOGGER.log(Level.WARNING,"File " + fName + " is already closed.");
         }
     }
 
@@ -177,7 +184,7 @@ public class Fat32Reader {
         }
         else
         {
-            LOGGER.warning("File " + fName + " does not exist.");
+            LOGGER.log(Level.WARNING,"File " + fName + " does not exist.");
         }
     }
 
@@ -195,7 +202,7 @@ public class Fat32Reader {
         }
         else
         {
-            LOGGER.warning("Directory " + dName + " does not exist.");
+            LOGGER.log(Level.WARNING,"Directory " + dName + " does not exist.");
         }
     }
 
@@ -234,7 +241,7 @@ public class Fat32Reader {
         }
         else
         {
-            LOGGER.warning("File " + fName + " is closed.");
+            LOGGER.log(Level.WARNING,"File " + fName + " is closed.");
         }
     }
 
