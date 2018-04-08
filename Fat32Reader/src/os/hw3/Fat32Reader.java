@@ -16,6 +16,11 @@ public class Fat32Reader {
 
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
     FileHandler fh;
+    private int BPB_BytesPerSec;
+    private int BPB_SecPerClus;
+    private int BPB_RsvdSecCnt;
+    private int BPB_NumFATS;
+    private int BPB_FATSz32;
 
     private String header;
 
@@ -47,15 +52,7 @@ public class Fat32Reader {
         FileInputStream fis = new FileInputStream(file);
 
         /* Parse boot sector and get information */
-//        byte[] buffer = new byte[5];
-//        //int result = fis.read(buffer);
-//       if(result != -1)
-//      {
-//        System.out.println("Buffer: " + buffer);
-//        fis.read(buffer, 11, 2);
-//        String bytesPerSec = new String(buffer);
-//        System.out.println("BPB_BytesPerSec: " + bytesPerSec);//TEST
-//        }
+        fr.setInfo(fis);
 
         /* Get root directory address */
             //printf("Root addr is 0x%x\n", root_addr);
@@ -115,8 +112,8 @@ public class Fat32Reader {
             {
                 if (command.equals("info"))
                 {
-                    System.out.println("Going to display info.");
-                    fr.getInfo();
+                    //System.out.println("Going to display info.");//TEST
+                    fr.printInfo();
                 }
                 else if (command.equals("quit"))
                 {
@@ -142,22 +139,64 @@ public class Fat32Reader {
     }
 
     /**
-     * Prints out the following info (in both hex and base 10)
+     * Set the BPB data fields
+     * @param fis
+     * @throws IOException
+     */
+    private void setInfo(FileInputStream fis) throws IOException {
+        BPB_BytesPerSec = setValue(fis, 11, 2, 11);
+        BPB_SecPerClus = setValue(fis, 13, 1, 0);
+        BPB_RsvdSecCnt = setValue(fis, 14, 2, 0);
+        BPB_NumFATS = setValue(fis, 16, 1, 0);
+        BPB_FATSz32 = setValue(fis, 36, 4, 19);
+    }
+
+    /**
+     * given a file stream, length of the field, and amount to skip (can be zero), return the integer value of the field
+     * @param fis
+     * @param offset
+     * @param length
+     * @param skip
+     * @return
+     * @throws IOException
+     */
+    private int setValue(FileInputStream fis, int offset, int length, int skip) throws IOException {
+        byte[] buffer = new byte[length];
+        //System.out.println("Buffer size: " + buffer.length);//TEST
+        fis.skip(skip);
+        fis.read(buffer, 0, length);
+        String temp = "";
+        //turn into hex and int
+        for(int i = buffer.length - 1; i >= 0; i--)
+        {
+            byte b = buffer[i];
+            //System.out.printf("0x%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
+            temp += String.format("%02X", b);
+        }
+        //System.out.println("0x" + temp);//TEST
+        int value = Integer.parseInt(temp, 16);
+        //System.out.println("integer: " + value);//TEST
+        //String value2 = Integer.toHexString(value);
+        //value2 = "0x" + value2;
+        //System.out.println("hex string: " + value2);//TEST
+        return value;
+    }
+
+    /**
+     * Prints out the following info (in both hex and base 10 - saved in fields as base 10)
      * BPB_BytesPerSec (512, 1024, 2048 or 4096 - offset 11 bytes, size 2 bytes)
      * BPB_SecPerClus (legal values are 1, 2, 4, 8, 16, 32, 64, and 128 - offset 13 bytes, size 1 bytes)
      * BPB_RsvdSecCnt (typically 32, cannot be 0 - offset 14 bytes, size 2 bytes)
      * BPB_NumFATS (standard value is 2 - offset 16 bytes, size 1 bytes)
      * BPB_FATSz32 (offset 36 bytes, size 4 bytes)
      */
-    private void getInfo()
+    private void printInfo()
     {
-//        BPB_BytesPerSec
-//        BPB_SecPerClus
-//        BPB_RsvdSecCnt
-//        BPB_NumFATS
-//        BPB_FATSz32
-        //convert to hex: Integer.toHexString();
-
+        System.out.println("BPB_BytesPerSec is 0x" + Integer.toHexString(BPB_BytesPerSec) + ", " + BPB_BytesPerSec);
+        System.out.println("BPB_SecPerClus is 0x" +  Integer.toHexString(BPB_SecPerClus) + ", " + BPB_SecPerClus);
+        System.out.println("BPB_RsvdSecCnt is 0x" + Integer.toHexString(BPB_RsvdSecCnt) + ", " + BPB_RsvdSecCnt);
+        System.out.println("BPB_NumFATS is 0x" + Integer.toHexString(BPB_NumFATS) + ", " + BPB_NumFATS);
+        System.out.println("BPB_FATSz32 is 0x" + Integer.toHexString(BPB_FATSz32) + ", " + BPB_FATSz32);
     }
 
     /**
