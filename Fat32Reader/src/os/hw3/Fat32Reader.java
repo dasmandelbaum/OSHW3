@@ -1,6 +1,6 @@
 package os.hw3;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.Scanner;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
@@ -11,27 +11,51 @@ import java.util.logging.Logger;
  *   Name of program: Fat32Reader
  *   Authors: David Mandelbaum
  *   Description: a program that supports file system commands (from specs)
- *   **********************************************************/
+ **********************************************************/
 public class Fat32Reader {
 
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
     FileHandler fh;
 
+    private String header;
+
+    public String getHeader() {
+        return header;
+    }
+
+    public void setHeader(String header) {
+        this.header = header;
+    }
+
     public Fat32Reader() throws IOException
     {
-        //if dont want console print (ugly): LogManager.getLogManager().reset();//https://stackoverflow.com/a/3363747
+        LogManager.getLogManager().reset();//https://stackoverflow.com/a/3363747
         LOGGER.setLevel(Level.INFO);
         fh = new FileHandler("fat32.log");
         LOGGER.addHandler(fh);
+        setHeader("/]");
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException
+    {
         Fat32Reader fr = new Fat32Reader();
-        /* Parse args and open our image file */
 
+        /* Parse args and open our image file */
+        File file = new File(args[0]);
+        System.out.println("File exists: " + file.exists());//TEST
+        System.out.println("Fat32 file path: " + file.getAbsolutePath());//TEST
+        FileInputStream fis = new FileInputStream(file);
 
         /* Parse boot sector and get information */
-
+//        byte[] buffer = new byte[5];
+//        //int result = fis.read(buffer);
+//       if(result != -1)
+//      {
+//        System.out.println("Buffer: " + buffer);
+//        fis.read(buffer, 11, 2);
+//        String bytesPerSec = new String(buffer);
+//        System.out.println("BPB_BytesPerSec: " + bytesPerSec);//TEST
+//        }
 
         /* Get root directory address */
             //printf("Root addr is 0x%x\n", root_addr);
@@ -43,7 +67,7 @@ public class Fat32Reader {
         while(true) {
             //bzero(cmd_line, MAX_CMD);
             //System.out.println("/]");
-            System.out.print("/]");
+            System.out.print(fr.getHeader());//print prompt
             //fgets(cmd_line, MAX_CMD, stdin);
             input = s.nextLine().toLowerCase();
             inputParts = input.split(" ");
@@ -144,15 +168,29 @@ public class Fat32Reader {
      */
     private void open(String fName)
     {
-        if(!isOpen(fName) && exists(fName))
+        if(!exists(fName))
+        {
+            LOGGER.log(Level.WARNING, "File " + fName + " does not exist.");
+            System.out.println("Error: does not exist");
+        }
+        else if(isOpen(fName))
+        {
+            LOGGER.log(Level.WARNING, "File " + fName + " is already open.");
+            System.out.println("Error: already open");
+        }
+        else if(isDirectory(fName))
+        {
+            LOGGER.log(Level.WARNING, "File " + fName + " is a directory and cannot be opened.");
+            System.out.println("Error: cannot open a directory");
+        }
+        else //exists and is not yet open nor is directory
         {
             //open file
         }
-        else
-        {
-            LOGGER.log(Level.WARNING, "File " + fName + " is closed or does not exist.");
-        }
+
     }
+
+
 
     /**
      * removes a file from the open-file table.
@@ -167,7 +205,8 @@ public class Fat32Reader {
         }
         else
         {
-            LOGGER.log(Level.WARNING,"File " + fName + " is already closed.");
+            LOGGER.log(Level.WARNING,"File " + fName + " not in open file table.");
+            System.out.println("Error: file not in open file table");
         }
     }
 
@@ -185,6 +224,7 @@ public class Fat32Reader {
         else
         {
             LOGGER.log(Level.WARNING,"File " + fName + " does not exist.");
+            System.out.println("Error: file does not exist");
         }
     }
 
@@ -196,13 +236,20 @@ public class Fat32Reader {
      */
     private void cd(String dName)
     {
-        if(exists(dName))
+        if(!exists(dName))
         {
+            LOGGER.log(Level.WARNING, dName + " does not exist.");
+            System.out.println("Error: does not exist");
+        }
+        else if(isDirectory(dName))
+        {
+            setHeader("/" + dName + getHeader());
             //change wd to fName
         }
         else
         {
-            LOGGER.log(Level.WARNING,"Directory " + dName + " does not exist.");
+            LOGGER.log(Level.WARNING, dName + " is not a directory.");
+            System.out.println("Error: not a directory");
         }
     }
 
@@ -238,10 +285,22 @@ public class Fat32Reader {
         if(isOpen(fName))
         {
             //read file
+            try
+            {
+                //TODO:
+//                RandomAccessFile raf = new RandomAccessFile(getFile(fName), "r");
+//                raf.read();
+            }
+            catch(Exception E)
+            {
+                LOGGER.log(Level.WARNING,"File " + fName + " error: attempt to read beyond EoF.");
+                System.out.println("Error: attempt to read beyond EoF");
+            }
         }
         else
         {
             LOGGER.log(Level.WARNING,"File " + fName + " is closed.");
+            System.out.println("Error: file not in open file table");
         }
     }
 
@@ -265,4 +324,12 @@ public class Fat32Reader {
        return false;
     }
 
+    /**
+     * sees if file name is a directory or not
+     * @param fName
+     * @return
+     */
+    private boolean isDirectory(String fName) {
+        return false;
+    }
 }
