@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c1a11c86-d032-44eb-9dcc-515e9b9e30db" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/os/hw3/Boot.java" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/Fat32Reader/os/hw3/Fat32Reader$Boot.class" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/out/production/Fat32Reader/os/hw3/Fat32Reader.class" afterPath="$PROJECT_DIR$/out/production/Fat32Reader/os/hw3/Fat32Reader.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/os/hw3/Fat32Reader.java" afterPath="$PROJECT_DIR$/src/os/hw3/Fat32Reader.java" />
-    </list>
+    <list default="true" id="c1a11c86-d032-44eb-9dcc-515e9b9e30db" name="Default" comment="" />
     <ignored path="$PROJECT_DIR$/out/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -209,12 +203,12 @@
       <workItem from="1523212637601" duration="4776000" />
       <workItem from="1523218055473" duration="118000" />
       <workItem from="1523218473966" duration="8897000" />
-      <workItem from="1523306100481" duration="641000" />
+      <workItem from="1523306100481" duration="675000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="22107000" />
+    <option name="totallyTimeSpent" value="22141000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="47" y="23" width="1213" height="782" extended-state="0" />
