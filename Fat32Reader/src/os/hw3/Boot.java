@@ -3,7 +3,11 @@ package os.hw3;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-public class Boot
+/**
+ * This class contains important fields from the boot sector of the FAT32 file system.
+ * Author: David Mandelbaum
+ */
+class Boot
 {
     //boot fields
     private int BPB_BytesPerSec;
@@ -18,7 +22,8 @@ public class Boot
      * @param fis
      * @throws IOException
      */
-    protected void setInfo(FileInputStream fis) throws IOException {
+    protected void setInfo(FileInputStream fis) throws IOException
+    {
         BPB_BytesPerSec = setValue(fis, 11, 2, 11);
         BPB_SecPerClus = setValue(fis, 13, 1, 0);
         BPB_RsvdSecCnt = setValue(fis, 14, 2, 0);
@@ -35,13 +40,14 @@ public class Boot
      * @return
      * @throws IOException
      */
-    private int setValue(FileInputStream fis, int offset, int length, int skip) throws IOException {
+    private int setValue(FileInputStream fis, int offset, int length, int skip) throws IOException
+    {
         byte[] buffer = new byte[length];
         //System.out.println("Buffer size: " + buffer.length);//TEST
         fis.skip(skip);
         fis.read(buffer, 0, length);
         String temp = "";
-        //turn into hex and int
+        //turn into hex string
         for(int i = buffer.length - 1; i >= 0; i--)
         {
             byte b = buffer[i];
