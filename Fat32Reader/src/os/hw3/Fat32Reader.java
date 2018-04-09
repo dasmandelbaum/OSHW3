@@ -19,63 +19,6 @@ public class Fat32Reader {
     private String header;
     private Boot boot;
 
-    public class Boot {
-
-        //boot fields
-        private int BPB_BytesPerSec;
-        private int BPB_SecPerClus;
-        private int BPB_RsvdSecCnt;
-        private int BPB_NumFATS;
-        private int BPB_FATSz32;
-        private int rootDirAddress;
-
-        /**
-         * Set the BPB data fields
-         * @param fis
-         * @throws IOException
-         */
-        private void setInfo(FileInputStream fis) throws IOException {
-            BPB_BytesPerSec = setValue(fis, 11, 2, 11);
-            BPB_SecPerClus = setValue(fis, 13, 1, 0);
-            BPB_RsvdSecCnt = setValue(fis, 14, 2, 0);
-            BPB_NumFATS = setValue(fis, 16, 1, 0);
-            BPB_FATSz32 = setValue(fis, 36, 4, 19);
-        }
-
-        /**
-         * given a file stream, length of the field, and amount to skip (can be zero), return the integer value of the field
-         * @param fis
-         * @param offset
-         * @param length
-         * @param skip
-         * @return
-         * @throws IOException
-         */
-        private int setValue(FileInputStream fis, int offset, int length, int skip) throws IOException {
-            byte[] buffer = new byte[length];
-            //System.out.println("Buffer size: " + buffer.length);//TEST
-            fis.skip(skip);
-            fis.read(buffer, 0, length);
-            String temp = "";
-            //turn into hex and int
-            for(int i = buffer.length - 1; i >= 0; i--)
-            {
-                byte b = buffer[i];
-                //System.out.printf("0x%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
-                temp += String.format("%02X", b);
-            }
-            //System.out.println("0x" + temp);//TEST
-            int value = Integer.parseInt(temp, 16);
-            //System.out.println("integer: " + value);//TEST
-            //String value2 = Integer.toHexString(value);
-            //value2 = "0x" + value2;
-            //System.out.println("hex string: " + value2);//TEST
-            return value;
-        }
-
-    }
-
-
     public String getHeader() {
         return header;
     }
@@ -109,8 +52,8 @@ public class Fat32Reader {
 
         /* Get root directory address */
             //printf("Root addr is 0x%x\n", root_addr);
-        fr.boot.rootDirAddress = (fr.boot.BPB_NumFATS * fr.boot.BPB_FATSz32) + fr.boot.BPB_RsvdSecCnt;
-        System.out.println("rootDirAddress is 0x" + Integer.toHexString(fr.boot.rootDirAddress) + ", " + fr.boot.rootDirAddress);
+        fr.boot.setRootDirAddress((fr.boot.getBPB_NumFATS() * fr.boot.getBPB_FATSz32()) + fr.boot.getBPB_RsvdSecCnt());
+        System.out.println("rootDirAddress is 0x" + Integer.toHexString(fr.boot.getRootDirAddress()) + ", " + fr.boot.getRootDirAddress());
         /* Main loop.  You probably want to create a helper function for each command besides quit. */
         Scanner s = new Scanner(System.in);
         String input;
@@ -204,11 +147,11 @@ public class Fat32Reader {
      */
     private void printInfo()
     {
-        System.out.println("BPB_BytesPerSec is 0x" + Integer.toHexString(this.boot.BPB_BytesPerSec) + ", " + this.boot.BPB_BytesPerSec);
-        System.out.println("BPB_SecPerClus is 0x" +  Integer.toHexString(this.boot.BPB_SecPerClus) + ", " + this.boot.BPB_SecPerClus);
-        System.out.println("BPB_RsvdSecCnt is 0x" + Integer.toHexString(this.boot.BPB_RsvdSecCnt) + ", " + this.boot.BPB_RsvdSecCnt);
-        System.out.println("BPB_NumFATS is 0x" + Integer.toHexString(this.boot.BPB_NumFATS) + ", " + this.boot.BPB_NumFATS);
-        System.out.println("BPB_FATSz32 is 0x" + Integer.toHexString(this.boot.BPB_FATSz32) + ", " + this.boot.BPB_FATSz32);
+        System.out.println("BPB_BytesPerSec is 0x" + Integer.toHexString(this.boot.getBPB_BytesPerSec()) + ", " + this.boot.getBPB_BytesPerSec());
+        System.out.println("BPB_SecPerClus is 0x" +  Integer.toHexString(this.boot.getBPB_SecPerClus()) + ", " + this.boot.getBPB_SecPerClus());
+        System.out.println("BPB_RsvdSecCnt is 0x" + Integer.toHexString(this.boot.getBPB_RsvdSecCnt()) + ", " + this.boot.getBPB_RsvdSecCnt());
+        System.out.println("BPB_NumFATS is 0x" + Integer.toHexString(this.boot.getBPB_NumFATS()) + ", " + this.boot.getBPB_NumFATS());
+        System.out.println("BPB_FATSz32 is 0x" + Integer.toHexString(this.boot.getBPB_FATSz32()) + ", " + this.boot.getBPB_FATSz32());
     }
 
     /**
