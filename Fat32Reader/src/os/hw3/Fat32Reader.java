@@ -95,6 +95,11 @@ public class Fat32Reader {
                     System.out.println("Going to ls.");
                     fr.ls(fName);
                 }
+                else if(command.equals("stat"))
+                {
+                    System.out.println("Going to stat!");
+                    fr.stat(fName);
+                }
                 else
                 {
                     System.out.println("Unrecognized command.");
@@ -134,6 +139,7 @@ public class Fat32Reader {
 
         /* Success */
     }
+
 
 
 
@@ -325,5 +331,10 @@ public class Fat32Reader {
      */
     private boolean isDirectory(String fName) {
         return false;
+    }
+
+    private void stat(String fName)
+    {
+        System.out.println("Retrieving stats.");//TEST
     }
 }
