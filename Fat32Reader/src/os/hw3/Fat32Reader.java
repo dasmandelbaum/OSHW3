@@ -117,6 +117,11 @@ public class Fat32Reader {
                     //System.out.println("Going to display info.");//TEST
                     fr.printInfo();
                 }
+                else if(command.equals("volume"))
+                {
+                    System.out.println("Going to print volume.");//TEST
+                    fr.volume();
+                }
                 else if (command.equals("quit"))
                 {
                     System.out.println("Quitting.");
@@ -287,7 +292,7 @@ public class Fat32Reader {
             //read file
             try
             {
-                //TODO:
+                //TODO: take file contents and print them out
 //                RandomAccessFile raf = new RandomAccessFile(getFile(fName), "r");
 //                raf.read();
             }
@@ -336,5 +341,10 @@ public class Fat32Reader {
     private void stat(String fName)
     {
         System.out.println("Retrieving stats.");//TEST
+    }
+
+    private void volume()
+    {
+        System.out.println("Retrieving volume.");//TEST
     }
 }
