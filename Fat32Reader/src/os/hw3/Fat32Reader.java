@@ -9,7 +9,7 @@ import java.util.logging.Logger;
 
 /************************************************************
  *   Name of program: Fat32Reader
- *   Authors: David Mandelbaum
+ *   Authors: Jeffrey Hagler, David Mandelbaum
  *   Description: a program that supports file system commands (from specs)
  **********************************************************/
 public class Fat32Reader {

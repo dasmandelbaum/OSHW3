@@ -5,7 +5,7 @@ import java.io.IOException;
 
 /**
  * This class contains important fields from the boot sector of the FAT32 file system.
- * Author: David Mandelbaum
+ * Author: Jeffrey Hagler, David Mandelbaum
  */
 class Boot
 {

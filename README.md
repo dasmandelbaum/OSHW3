@@ -1,6 +1,6 @@
 # OSHW3
 
-## David Mandelbaum
+## Jeffrey Hagler and David Mandelbaum
 ## A listing of all files/directories in your submission and a brief description of each
   *
   *
