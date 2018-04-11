@@ -1,4 +1,26 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE log SYSTEM "logger.dtd">
 <log>
+<record>
+  <date>2018-04-10T23:32:10</date>
+  <millis>1523417530446</millis>
+  <sequence>0</sequence>
+  <logger>global</logger>
+  <level>WARNING</level>
+  <class>os.hw3.Fat32Reader</class>
+  <method>open</method>
+  <thread>1</thread>
+  <message>File fun does not exist.</message>
+</record>
+<record>
+  <date>2018-04-10T23:32:17</date>
+  <millis>1523417537331</millis>
+  <sequence>1</sequence>
+  <logger>global</logger>
+  <level>WARNING</level>
+  <class>os.hw3.Fat32Reader</class>
+  <method>close</method>
+  <thread>1</thread>
+  <message>File fun not in open file table.</message>
+</record>
 </log>

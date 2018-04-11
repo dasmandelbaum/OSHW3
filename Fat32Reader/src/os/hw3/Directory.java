@@ -25,11 +25,21 @@ public class Directory
     private byte[] DIR_FileSize = new byte[4];//32-bit DWORD holding this file’s size in bytes. - 28-31
 
     /*
-        Info needed for this file system
-     */
+         Info needed for this file system
+      */
     private String pathToHere;
     private String name;
     private Directory parentDirectory;
     private boolean containsFiles;//see if it holds files
     private ArrayList<Directory> files;
+    /*
+        Stats to print
+     */
+    private int size;
+    private String attributes;
+    private String nextClusterNum;
+    /*
+        Field for reading
+     */
+    private byte[] text;
 }

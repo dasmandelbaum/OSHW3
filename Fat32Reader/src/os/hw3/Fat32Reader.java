@@ -1,6 +1,7 @@
 package os.hw3;
 
 import java.io.*;
+import java.util.HashMap;
 import java.util.Scanner;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
@@ -18,6 +19,9 @@ public class Fat32Reader {
     FileHandler fh;
     private String header;
     private Boot boot;
+    private Directory fs;
+    private HashMap<String, Directory> openFiles;
+    private String volumeName;
 
     public String getHeader() {
         return header;
@@ -35,6 +39,8 @@ public class Fat32Reader {
         LOGGER.addHandler(fh);
         setHeader("/]");
         boot = new Boot();
+        fs = new Directory();
+        openFiles = new HashMap<String, Directory>();
     }
 
     public static void main(String[] args) throws IOException
@@ -54,6 +60,12 @@ public class Fat32Reader {
             //printf("Root addr is 0x%x\n", root_addr);
         fr.boot.setRootDirAddress((fr.boot.getBPB_NumFATS() * fr.boot.getBPB_FATSz32()) + fr.boot.getBPB_RsvdSecCnt());
         System.out.println("rootDirAddress is 0x" + Integer.toHexString(fr.boot.getRootDirAddress()) + ", " + fr.boot.getRootDirAddress());
+        //TODO:GET VOLUME NAME
+        /* Build fs file system for user to navigate through with commands*/
+
+
+
+
         /* Main loop.  You probably want to create a helper function for each command besides quit. */
         Scanner s = new Scanner(System.in);
         String input;
@@ -346,5 +358,6 @@ public class Fat32Reader {
     private void volume()
     {
         System.out.println("Retrieving volume.");//TEST
+        System.out.println("Volume name: " + volumeName);
     }
 }
