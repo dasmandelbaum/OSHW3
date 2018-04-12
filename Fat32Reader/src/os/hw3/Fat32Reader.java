@@ -60,10 +60,17 @@ public class Fat32Reader {
             //printf("Root addr is 0x%x\n", root_addr);
         fr.boot.setRootDirAddress((fr.boot.getBPB_NumFATS() * fr.boot.getBPB_FATSz32()) + fr.boot.getBPB_RsvdSecCnt());
         System.out.println("rootDirAddress is 0x" + Integer.toHexString(fr.boot.getRootDirAddress()) + ", " + fr.boot.getRootDirAddress());
+        fis.skip((fr.boot.getRootDirAddress() * 512) - 40);
+        byte[] buffer = new byte[32];
+        fis.read(buffer, 0, 32);
+        //turn into hex string
+        for(int i = buffer.length - 1; i >= 0; i--)
+        {
+            byte b = buffer[i];
+            System.out.printf("0x%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
+        }
+
         //TODO:GET VOLUME NAME
-        /* Build fs file system for user to navigate through with commands*/
-
-
 
 
         /* Main loop.  You probably want to create a helper function for each command besides quit. */
