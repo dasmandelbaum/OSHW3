@@ -13,7 +13,7 @@ public class Directory
      */
     private byte[] DIR_Name = new byte[11];//short name - 0 -> 11
     private byte[] DIR_Attr = new byte[1];//file attributes - 11 -> 12
-    //private byte[] DIR_NTRes = new byte[1];//used by WindowsNT (?) - 12 -> 13
+    private byte[] DIR_NTRes = new byte[1];//used by WindowsNT (?) - 12 -> 13
     private byte[] CrtTimeTenth = new byte[1];//Millisecond stamp at file creation time (count of tenths of a second) - 13 ->14
     private byte[] DIR_CrtTime = new byte[2];//Time file was created - 14 -> 16
     private byte[] DIR_CrtDate = new byte[2];//Date file was created - 16 -> 18

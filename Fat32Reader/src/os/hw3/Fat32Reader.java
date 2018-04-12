@@ -52,23 +52,16 @@ public class Fat32Reader {
         System.out.println("File exists: " + file.exists());//TEST
         System.out.println("Fat32 file path: " + file.getAbsolutePath());//TEST
         FileInputStream fis = new FileInputStream(file);
-
         /* Parse boot sector and get information */
         fr.boot.setInfo(fis);
 
         /* Get root directory address */
-            //printf("Root addr is 0x%x\n", root_addr);
         fr.boot.setRootDirAddress((fr.boot.getBPB_NumFATS() * fr.boot.getBPB_FATSz32()) + fr.boot.getBPB_RsvdSecCnt());
+        int startOfRootDirectory = (fr.boot.getRootDirAddress() * 512);
         System.out.println("rootDirAddress is 0x" + Integer.toHexString(fr.boot.getRootDirAddress()) + ", " + fr.boot.getRootDirAddress());
-        fis.skip((fr.boot.getRootDirAddress() * 512) - 40);
-        byte[] buffer = new byte[32];
-        fis.read(buffer, 0, 32);
-        //turn into hex string
-        for(int i = buffer.length - 1; i >= 0; i--)
-        {
-            byte b = buffer[i];
-            System.out.printf("0x%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
-        }
+        System.out.println("Skipping to " + (startOfRootDirectory - 40));
+        fis.skip(startOfRootDirectory - 40);//subtract current location in boot
+        fr.parseRoot(fis);
 
         //TODO:GET VOLUME NAME
 
@@ -164,7 +157,42 @@ public class Fat32Reader {
         /* Success */
     }
 
-
+    private void parseRoot(FileInputStream fis) throws IOException {
+        byte[] buffer = new byte[32];
+        //fis.read(buffer, 0, 32);
+        byte[] DIR_Name = new byte[11];//short name - 0 -> 11
+        String name = "";
+       /* for(int j = 0; j < 11; j++)
+        {
+            byte b = buffer[j];
+            DIR_Name[j] = b;
+        }*/
+        fis.read(DIR_Name, 0, 10);
+        String byteString = new String(DIR_Name, "UTF-8");//https://stackoverflow.com/a/18583290
+        System.out.println(byteString);
+        this.volumeName = byteString.substring(0, byteString.indexOf(" "));
+        System.out.println("Volume name: " + this.volumeName);
+        byte[] DIR_Attr = new byte[1];//file attributes - 11 -> 12
+        fis.read(DIR_Attr,0,1);
+        System.out.print("Root attribute: " + DIR_Attr);
+        //System.out.printf("0x%02X\n", DIR_Attr);//https://stackoverflow.com/a/1748044//TEST
+        byte[] DIR_NTRes = new byte[1];//used by WindowsNT (?) - 12 -> 13
+        byte[] CrtTimeTenth = new byte[1];//Millisecond stamp at file creation time (count of tenths of a second) - 13 ->14
+        byte[] DIR_CrtTime = new byte[2];//Time file was created - 14 -> 16
+        byte[] DIR_CrtDate = new byte[2];//Date file was created - 16 -> 18
+        byte[] DIR_LstAccDate = new byte[2];//Last access date - 18 ->20
+        byte[] DIR_FstClusHI = new byte[2];//High word of this entry’s first cluster number - 20 -> 22
+        byte[] DIR_WrtTime = new byte[2];//Time of last write - 22 -> 24
+        byte[] DIR_WrtDate = new byte[2];//Date of last write - 24 -> 26
+        byte[] DIR_FstClusLO = new byte[2];//Low word of this entry’s first cluster number - 26 -> 28
+        byte[] DIR_FileSize = new byte[4];//32-bit DWORD holding this file’s size in bytes. - 28-31
+        //turn into hex string
+        for(int i = buffer.length - 1; i >= 0; i--)
+        {
+            byte b = buffer[i];
+            System.out.printf("0x%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
+        }
+    }
 
 
     /**
@@ -365,6 +393,6 @@ public class Fat32Reader {
     private void volume()
     {
         System.out.println("Retrieving volume.");//TEST
-        System.out.println("Volume name: " + volumeName);
+        System.out.println("Volume name: " + this.volumeName);
     }
 }
