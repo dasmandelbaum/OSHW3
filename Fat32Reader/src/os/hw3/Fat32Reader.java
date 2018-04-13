@@ -61,20 +61,15 @@ public class Fat32Reader {
         System.out.println("rootDirAddress is 0x" + Integer.toHexString(fr.boot.getRootDirAddress()) + ", " + fr.boot.getRootDirAddress());
         System.out.println("Skipping to " + (startOfRootDirectory - 40));
         fis.skip(startOfRootDirectory - 40);//subtract current location in boot
-        fr.parseRoot(fis);
-
-        //TODO:GET VOLUME NAME
-
+        fr.parseDirectories(fis);
 
         /* Main loop.  You probably want to create a helper function for each command besides quit. */
         Scanner s = new Scanner(System.in);
         String input;
         String[] inputParts;
         while(true) {
-            //bzero(cmd_line, MAX_CMD);
             //System.out.println("/]");
             System.out.print(fr.getHeader());//print prompt
-            //fgets(cmd_line, MAX_CMD, stdin);
             input = s.nextLine().toLowerCase();
             inputParts = input.split(" ");
             String command = inputParts[0];
@@ -104,12 +99,12 @@ public class Fat32Reader {
                 }
                 else if (command.equals("ls"))
                 {
-                    System.out.println("Going to ls.");
+                    //System.out.println("Going to ls.");
                     fr.ls(fName);
                 }
                 else if(command.equals("stat"))
                 {
-                    System.out.println("Going to stat!");
+                    //System.out.println("Going to stat!");
                     fr.stat(fName);
                 }
                 else
@@ -131,7 +126,7 @@ public class Fat32Reader {
                 }
                 else if(command.equals("volume"))
                 {
-                    System.out.println("Going to print volume.");//TEST
+                    //System.out.println("Going to print volume.");//TEST
                     fr.volume();
                 }
                 else if (command.equals("quit"))
@@ -157,43 +152,115 @@ public class Fat32Reader {
         /* Success */
     }
 
-    private void parseRoot(FileInputStream fis) throws IOException {
-        byte[] buffer = new byte[32];
-        //fis.read(buffer, 0, 32);
-        byte[] DIR_Name = new byte[11];//short name - 0 -> 11
-        String name = "";
-       /* for(int j = 0; j < 11; j++)
+    private void parseDirectories(FileInputStream fis) throws IOException {
+        //start with root
+        Directory dir = parseDirectory(fis);
+        this.fs = dir;
+        //for any other directory listed after root
+        for(int i = 0; i < 5; i++)//TODO: change this from 5
         {
-            byte b = buffer[j];
-            DIR_Name[j] = b;
-        }*/
-        fis.read(DIR_Name, 0, 10);
-        String byteString = new String(DIR_Name, "UTF-8");//https://stackoverflow.com/a/18583290
-        System.out.println(byteString);
-        this.volumeName = byteString.substring(0, byteString.indexOf(" "));
-        System.out.println("Volume name: " + this.volumeName);
-        byte[] DIR_Attr = new byte[1];//file attributes - 11 -> 12
-        fis.read(DIR_Attr,0,1);
-        System.out.print("Root attribute: " + DIR_Attr);
-        //System.out.printf("0x%02X\n", DIR_Attr);//https://stackoverflow.com/a/1748044//TEST
-        byte[] DIR_NTRes = new byte[1];//used by WindowsNT (?) - 12 -> 13
-        byte[] CrtTimeTenth = new byte[1];//Millisecond stamp at file creation time (count of tenths of a second) - 13 ->14
-        byte[] DIR_CrtTime = new byte[2];//Time file was created - 14 -> 16
-        byte[] DIR_CrtDate = new byte[2];//Date file was created - 16 -> 18
-        byte[] DIR_LstAccDate = new byte[2];//Last access date - 18 ->20
-        byte[] DIR_FstClusHI = new byte[2];//High word of this entry’s first cluster number - 20 -> 22
-        byte[] DIR_WrtTime = new byte[2];//Time of last write - 22 -> 24
-        byte[] DIR_WrtDate = new byte[2];//Date of last write - 24 -> 26
-        byte[] DIR_FstClusLO = new byte[2];//Low word of this entry’s first cluster number - 26 -> 28
-        byte[] DIR_FileSize = new byte[4];//32-bit DWORD holding this file’s size in bytes. - 28-31
-        //turn into hex string
-        for(int i = buffer.length - 1; i >= 0; i--)
-        {
-            byte b = buffer[i];
-            System.out.printf("0x%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
+            fis.skip(32);
+            dir = parseDirectory(fis);
+            this.fs.files.add(dir);
         }
     }
 
+    private Directory parseDirectory(FileInputStream fis) throws IOException
+    {
+        Directory dir = new Directory();
+        //byte[] buffer = new byte[32];
+        //fis.read(buffer, 0, 32);
+        byte[] DIR_Name = new byte[11];//short name - 0 -> 11
+        fis.read(DIR_Name, 0, 11);
+        String byteString = new String(DIR_Name, "UTF-8");//https://stackoverflow.com/a/18583290
+        System.out.println(byteString);
+        String[] splitName = byteString.split(" +");
+        if(splitName.length == 2)
+        {
+            dir.name = splitName[0] + "." + splitName[1];
+            dir.name = dir.name.toLowerCase();
+        }
+        else
+        {
+            dir.name = byteString;
+        }
+        System.out.println("name: " + dir.name);
+
+
+        byte[] DIR_Attr = new byte[1];//file attributes - 11 -> 12
+        fis.read(DIR_Attr,0,1);
+        String temp = "";
+        for(int i = DIR_Attr.length - 1; i >= 0; i--)
+        {
+            byte b = DIR_Attr[i];
+            //System.out.printf("%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
+            temp += b;//String.format("%02X", b);
+        }
+        System.out.println("attribute: " + temp);
+        //TODO: what about longname?
+        if(temp.equals("1"))//root
+        {
+            dir.attributes = "ATTR_READ_ONLY";
+        }
+        else if(temp.equals("2"))//root
+        {
+            dir.attributes = "ATTR_HIDDEN";
+        }
+        else if(temp.equals("4"))//root
+        {
+            dir.attributes = "ATTR_SYSTEM";
+        }
+        else if(temp.equals("8"))//root - TODO: Make . and .. directories and add it?
+        {
+            dir.attributes = "ATTR_VOLUME_ID";
+            this.volumeName = byteString.substring(0, byteString.indexOf(" "));
+        }
+        else if(temp.equals("16"))//root
+        {
+            dir.attributes = "ATTR_DIRECTORY";
+        }
+        else if(temp.equals("32"))
+        {
+            dir.attributes = "ATTR_ARCHIVE";
+        }
+
+        /*byte[] DIR_NTRes = new byte[1];//used by WindowsNT (?) - 12 -> 13
+        byte[] CrtTimeTenth = new byte[1];//Millisecond stamp at file creation time (count of tenths of a second) - 13 ->14
+        byte[] DIR_CrtTime = new byte[2];//Time file was created - 14 -> 16
+        byte[] DIR_CrtDate = new byte[2];//Date file was created - 16 -> 18
+        byte[] DIR_LstAccDate = new byte[2];//Last access date - 18 ->20*/
+
+        byte[] DIR_FstClusHI = new byte[2];//High word of this entry’s first cluster number - 20 -> 22
+        String hi = getValue(fis, DIR_FstClusHI, 8, 2);
+
+        /*byte[] DIR_WrtTime = new byte[2];//Time of last write - 22 -> 24
+        byte[] DIR_WrtDate = new byte[2];//Date of last write - 24 -> 26*/
+        byte[] DIR_FstClusLO = new byte[2];//Low word of this entry’s first cluster number - 26 -> 28
+        String lo = getValue(fis, DIR_FstClusLO, 4, 2);
+        String clus = lo.concat(hi);
+        dir.nextClusterNumber = Integer.parseInt(clus, 16);
+        System.out.println("next cluster number: " + dir.nextClusterNumber);
+
+        byte[] DIR_FileSize = new byte[4];//32-bit DWORD holding this file’s size in bytes. - 28-32
+        temp = getValue(fis, DIR_FileSize, 0, 4);
+        System.out.println("File size: " + temp);
+        dir.size = Integer.parseInt(temp, 16);
+        return dir;
+    }
+
+
+    private String getValue(FileInputStream fis, byte[] buffer, int skip, int size) throws IOException {
+        fis.skip(skip);
+        fis.read(buffer, 0, size);
+        String temp = "";
+        for(int i = buffer.length - 1; i >= 0; i--)
+        {
+            byte b = buffer[i];
+            //System.out.printf("%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
+            temp += String.format("%02X", b);
+        }
+        return temp;
+    }
 
     /**
      * Prints out the following info (in both hex and base 10 - saved in fields as base 10)
@@ -313,15 +380,21 @@ public class Fat32Reader {
     {
         if(dName.equals("."))
         {
-            //list current directory
+            //list current directory contents
+            for(Directory dir : fs.files)//TODO: change this - test
+            {
+                System.out.print(dir.name + "\t");
+            }
+            System.out.println();
         }
         else if(dName.equals(".."))
         {
-            //list from one directory up
+            //list contents from one directory up
         }
         else
         {
-            //list directory
+            //list directory contents
+
         }
     }
 
@@ -388,6 +461,12 @@ public class Fat32Reader {
     private void stat(String fName)
     {
         System.out.println("Retrieving stats.");//TEST
+        if(fName.toLowerCase().equals(this.volumeName.toLowerCase()))
+        {
+            System.out.println("Size is " + fs.size);
+            System.out.println("Attributes " + fs.attributes);
+            System.out.println("Next cluster number is 0x" + Integer.toHexString(fs.nextClusterNumber));
+        }
     }
 
     private void volume()
@@ -395,4 +474,10 @@ public class Fat32Reader {
         System.out.println("Retrieving volume.");//TEST
         System.out.println("Volume name: " + this.volumeName);
     }
+
+    private int getFirstSectorOfCluster(int n)
+    {
+        return (((n - 2) * this.boot.getBPB_SecPerClus()) + this.boot.getRootDirAddress());
+    }
+
 }
