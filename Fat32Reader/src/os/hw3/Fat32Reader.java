@@ -232,18 +232,21 @@ public class Fat32Reader {
 
         byte[] DIR_FstClusHI = new byte[2];//High word of this entry’s first cluster number - 20 -> 22
         String hi = getValue(fis, DIR_FstClusHI, 8, 2);
+        //System.out.println("Hi value: " + hi);//TEST
 
         /*byte[] DIR_WrtTime = new byte[2];//Time of last write - 22 -> 24
         byte[] DIR_WrtDate = new byte[2];//Date of last write - 24 -> 26*/
         byte[] DIR_FstClusLO = new byte[2];//Low word of this entry’s first cluster number - 26 -> 28
         String lo = getValue(fis, DIR_FstClusLO, 4, 2);
-        String clus = lo.concat(hi);
+        //System.out.println("Lo value: " + lo);//TEST
+        String clus = hi.concat(lo);
+        //System.out.println("Cluster value: " + clus);//TEST
         dir.nextClusterNumber = Integer.parseInt(clus, 16);
-        System.out.println("next cluster number: " + dir.nextClusterNumber);
+        System.out.println("next cluster number: 0x" + Integer.toHexString(dir.nextClusterNumber));
 
         byte[] DIR_FileSize = new byte[4];//32-bit DWORD holding this file’s size in bytes. - 28-32
         temp = getValue(fis, DIR_FileSize, 0, 4);
-        System.out.println("File size: " + temp);
+        System.out.println("File size: 0x" + temp);
         dir.size = Integer.parseInt(temp, 16);
         return dir;
     }
