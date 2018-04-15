@@ -22,13 +22,15 @@ class Boot
      * @param fis
      * @throws IOException
      */
-    protected void setInfo(FileInputStream fis) throws IOException
+    Boot(FileInputStream fis, Fat32Reader fr) throws IOException
     {
         BPB_BytesPerSec = setValue(fis, 11, 2, 11);
         BPB_SecPerClus = setValue(fis, 13, 1, 0);
         BPB_RsvdSecCnt = setValue(fis, 14, 2, 0);
         BPB_NumFATS = setValue(fis, 16, 1, 0);
         BPB_FATSz32 = setValue(fis, 36, 4, 19);
+        rootDirAddress = (getBPB_NumFATS() * getBPB_FATSz32()) + getBPB_RsvdSecCnt();
+        fr.currentLocation = 40;
     }
 
     /**
@@ -67,47 +69,24 @@ class Boot
         return rootDirAddress;
     }
 
-    public void setRootDirAddress(int rootDirAddress) {
-        this.rootDirAddress = rootDirAddress;
-    }
-
     public int getBPB_FATSz32() {
         return BPB_FATSz32;
-    }
-
-    public void setBPB_FATSz32(int BPB_FATSz32) {
-        this.BPB_FATSz32 = BPB_FATSz32;
     }
 
     public int getBPB_NumFATS() {
         return BPB_NumFATS;
     }
 
-    public void setBPB_NumFATS(int BPB_NumFATS) {
-        this.BPB_NumFATS = BPB_NumFATS;
-    }
-
     public int getBPB_RsvdSecCnt() {
         return BPB_RsvdSecCnt;
-    }
-
-    public void setBPB_RsvdSecCnt(int BPB_RsvdSecCnt) {
-        this.BPB_RsvdSecCnt = BPB_RsvdSecCnt;
     }
 
     public int getBPB_SecPerClus() {
         return BPB_SecPerClus;
     }
 
-    public void setBPB_SecPerClus(int BPB_SecPerClus) {
-        this.BPB_SecPerClus = BPB_SecPerClus;
-    }
-
     public int getBPB_BytesPerSec() {
         return BPB_BytesPerSec;
     }
 
-    public void setBPB_BytesPerSec(int BPB_BytesPerSec) {
-        this.BPB_BytesPerSec = BPB_BytesPerSec;
-    }
 }

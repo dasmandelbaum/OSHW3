@@ -18,10 +18,12 @@ public class Fat32Reader {
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
     FileHandler fh;
     private String header;
-    private Boot boot;
+    Boot boot;
+    private FAT fat;
     private Directory fs;
     private HashMap<String, Directory> openFiles;
     private String volumeName;
+    int currentLocation;
 
     public String getHeader() {
         return header;
@@ -38,9 +40,9 @@ public class Fat32Reader {
         fh = new FileHandler("fat32.log");
         LOGGER.addHandler(fh);
         setHeader("/]");
-        boot = new Boot();
         fs = new Directory();
         openFiles = new HashMap<String, Directory>();
+        currentLocation = 0;
     }
 
     public static void main(String[] args) throws IOException
@@ -53,14 +55,17 @@ public class Fat32Reader {
         System.out.println("Fat32 file path: " + file.getAbsolutePath());//TEST
         FileInputStream fis = new FileInputStream(file);
         /* Parse boot sector and get information */
-        fr.boot.setInfo(fis);
+        fr.boot = new Boot(fis, fr);
+
+        /* Create FAT table for reference */
+        fr.fat = new FAT(fis, fr, fr.getAddress(fr.boot.getBPB_RsvdSecCnt()));
 
         /* Get root directory address */
-        fr.boot.setRootDirAddress((fr.boot.getBPB_NumFATS() * fr.boot.getBPB_FATSz32()) + fr.boot.getBPB_RsvdSecCnt());
-        int startOfRootDirectory = (fr.boot.getRootDirAddress() * 512);
+        int startOfRootDirectory = fr.getAddress(fr.boot.getRootDirAddress());
         System.out.println("rootDirAddress is 0x" + Integer.toHexString(fr.boot.getRootDirAddress()) + ", " + fr.boot.getRootDirAddress());
-        System.out.println("Skipping to " + (startOfRootDirectory - 40));
-        fis.skip(startOfRootDirectory - 40);//subtract current location in boot
+        System.out.println("Skipping to " + (startOfRootDirectory));
+        fis.skip(startOfRootDirectory - fr.currentLocation);//subtract current location to see how much to skip
+        fr.currentLocation = startOfRootDirectory;
         fr.parseDirectories(fis);
 
         /* Main loop.  You probably want to create a helper function for each command besides quit. */
@@ -152,7 +157,13 @@ public class Fat32Reader {
         /* Success */
     }
 
-    private void parseDirectories(FileInputStream fis) throws IOException {
+    private int getAddress(int i)
+    {
+        return i * this.boot.getBPB_BytesPerSec();
+    }
+
+    private void parseDirectories(FileInputStream fis) throws IOException
+    {
         //start with root
         Directory dir = parseDirectory(fis);
         this.fs = dir;
@@ -198,31 +209,7 @@ public class Fat32Reader {
         }
         System.out.println("attribute: " + temp);
         //TODO: what about longname?
-        if(temp.equals("1"))//root
-        {
-            dir.attributes = "ATTR_READ_ONLY";
-        }
-        else if(temp.equals("2"))//root
-        {
-            dir.attributes = "ATTR_HIDDEN";
-        }
-        else if(temp.equals("4"))//root
-        {
-            dir.attributes = "ATTR_SYSTEM";
-        }
-        else if(temp.equals("8"))//root - TODO: Make . and .. directories and add it?
-        {
-            dir.attributes = "ATTR_VOLUME_ID";
-            this.volumeName = byteString.substring(0, byteString.indexOf(" "));
-        }
-        else if(temp.equals("16"))//root
-        {
-            dir.attributes = "ATTR_DIRECTORY";
-        }
-        else if(temp.equals("32"))
-        {
-            dir.attributes = "ATTR_ARCHIVE";
-        }
+        setAttribute(dir, byteString, temp);
 
         /*byte[] DIR_NTRes = new byte[1];//used by WindowsNT (?) - 12 -> 13
         byte[] CrtTimeTenth = new byte[1];//Millisecond stamp at file creation time (count of tenths of a second) - 13 ->14
@@ -249,6 +236,41 @@ public class Fat32Reader {
         System.out.println("File size: 0x" + temp);
         dir.size = Integer.parseInt(temp, 16);
         return dir;
+    }
+
+    /**
+     *
+     * @param dir
+     * @param byteString
+     * @param temp
+     */
+    private void setAttribute(Directory dir, String byteString, String temp)
+    {
+        if(temp.equals("1"))//root
+        {
+            dir.attributes = "ATTR_READ_ONLY";
+        }
+        else if(temp.equals("2"))//root
+        {
+            dir.attributes = "ATTR_HIDDEN";
+        }
+        else if(temp.equals("4"))//root
+        {
+            dir.attributes = "ATTR_SYSTEM";
+        }
+        else if(temp.equals("8"))//root - TODO: Make . and .. directories and add it?
+        {
+            dir.attributes = "ATTR_VOLUME_ID";
+            this.volumeName = byteString.substring(0, byteString.indexOf(" "));
+        }
+        else if(temp.equals("16"))//root
+        {
+            dir.attributes = "ATTR_DIRECTORY";
+        }
+        else if(temp.equals("32"))
+        {
+            dir.attributes = "ATTR_ARCHIVE";
+        }
     }
 
 
@@ -483,4 +505,13 @@ public class Fat32Reader {
         return (((n - 2) * this.boot.getBPB_SecPerClus()) + this.boot.getRootDirAddress());
     }
 
+    private int getFATSecNum(int FATOffset)
+    {
+        return this.boot.getBPB_RsvdSecCnt() + (FATOffset / this.boot.getBPB_BytesPerSec());
+    }
+
+    private int getFATEntOffset(int FATOffset)
+    {
+        return (FATOffset % this.boot.getBPB_BytesPerSec());
+    }
 }
