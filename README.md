@@ -23,7 +23,7 @@
  2. Run the following command (with maven) from the Fat32Reader folder:
  
     ```
- mvn clean compile exec:java -Dexec.mainClass="os.hw3.Fat32Reader" -Dexec.args="fat32.img" 
+    mvn clean compile exec:java -Dexec.mainClass="os.hw3.Fat32Reader" -Dexec.args="fat32.img" 
     ```
  
 ##	Challenges encountered along the way
