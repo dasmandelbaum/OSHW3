@@ -16,4 +16,12 @@ class FAT {
         fr.currentLocation = address + fatSize;
     }
 
+    int getNextCluster(int fatSecNum, int fatEntOffset)
+    {
+        byte nextClus = fatTable[fatSecNum * 32];
+        String nextClusString = String.format("%8s", Integer.toBinaryString(nextClus & 0xFF)).replace(' ', '0');//https://stackoverflow.com/questions/12310017/how-to-convert-a-byte-to-its-binary-string-representation
+        return Integer.parseInt(nextClusString, 16);
+    }
+
+
 }

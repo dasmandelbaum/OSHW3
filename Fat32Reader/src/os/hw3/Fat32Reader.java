@@ -1,6 +1,7 @@
 package os.hw3;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.logging.FileHandler;
@@ -20,7 +21,7 @@ public class Fat32Reader {
     private String header;
     Boot boot;
     private FAT fat;
-    private Directory fs;
+    private Directory fs;//TODO: change to currentLocation
     private HashMap<String, Directory> openFiles;
     private String volumeName;
     int currentLocation;
@@ -59,6 +60,7 @@ public class Fat32Reader {
 
         /* Create FAT table for reference */
         fr.fat = new FAT(fis, fr, fr.getAddress(fr.boot.getBPB_RsvdSecCnt()));
+        System.out.println("FAT created with size " + fr.fat.fatSize);
 
         /* Get root directory address */
         int startOfRootDirectory = fr.getAddress(fr.boot.getRootDirAddress());
@@ -85,7 +87,7 @@ public class Fat32Reader {
                 if (command.equals("open"))
                 {
                     System.out.println("Going to open!");
-                    fr.open(fName);
+                    fr.open(fName, fis);
                 }
                 else if (command.equals("close"))
                 {
@@ -100,7 +102,7 @@ public class Fat32Reader {
                 else if (command.equals("cd"))
                 {
                     System.out.println("Going to cd!");
-                    fr.cd(fName);
+                    fr.cd(fName, fis);
                 }
                 else if (command.equals("ls"))
                 {
@@ -110,7 +112,7 @@ public class Fat32Reader {
                 else if(command.equals("stat"))
                 {
                     //System.out.println("Going to stat!");
-                    fr.stat(fName);
+                    fr.stat(fName, fis);
                 }
                 else
                 {
@@ -165,26 +167,48 @@ public class Fat32Reader {
     private void parseDirectories(FileInputStream fis) throws IOException
     {
         //start with root
-        Directory dir = parseDirectory(fis);
+        Directory dir = new Directory();
+        parseDirectory(fis, dir);
         this.fs = dir;
         //for any other directory listed after root
-        for(int i = 0; i < 5; i++)//TODO: change this from 5
+        for(int i = 0; i < 16; i++)//TODO: change this
         {
-            fis.skip(32);
-            dir = parseDirectory(fis);
-            this.fs.files.add(dir);
+            //System.out.println("CURRENT LOCATION: " + this.currentLocation);//TEST
+            int b = fis.read();
+            String c = String.format("%02X", b);
+            //System.out.println(c);//TEST
+            if(c.equals("95"))
+            {
+                break;
+            }
+            fis.skip(31);
+            dir = new Directory();
+            if(parseDirectory(fis, dir))
+            {
+                this.fs.files.add(dir);
+            }
+            else //done with directories in root
+            {
+                break;
+            }
         }
     }
 
-    private Directory parseDirectory(FileInputStream fis) throws IOException
+    private boolean parseDirectory(FileInputStream fis, Directory dir) throws IOException
     {
-        Directory dir = new Directory();
         //byte[] buffer = new byte[32];
         //fis.read(buffer, 0, 32);
         byte[] DIR_Name = new byte[11];//short name - 0 -> 11
         fis.read(DIR_Name, 0, 11);
+        this.currentLocation += 11;
+        //System.out.println(DIR_Name[0]);//TEST
+        if(DIR_Name[0] == 95)//TODO CHANGE THIS
+        {
+            //done with directories
+            return false;
+        }
         String byteString = new String(DIR_Name, "UTF-8");//https://stackoverflow.com/a/18583290
-        System.out.println(byteString);
+        //System.out.println(byteString);//TEST
         String[] splitName = byteString.split(" +");
         if(splitName.length == 2)
         {
@@ -195,11 +219,12 @@ public class Fat32Reader {
         {
             dir.name = byteString;
         }
-        System.out.println("name: " + dir.name);
+        //System.out.println("name: " + dir.name);//TEST
 
 
         byte[] DIR_Attr = new byte[1];//file attributes - 11 -> 12
         fis.read(DIR_Attr,0,1);
+        this.currentLocation += 1;
         String temp = "";
         for(int i = DIR_Attr.length - 1; i >= 0; i--)
         {
@@ -207,7 +232,7 @@ public class Fat32Reader {
             //System.out.printf("%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
             temp += b;//String.format("%02X", b);
         }
-        System.out.println("attribute: " + temp);
+        //System.out.println("attribute: " + temp);//TEST
         //TODO: what about longname?
         setAttribute(dir, byteString, temp);
 
@@ -219,23 +244,26 @@ public class Fat32Reader {
 
         byte[] DIR_FstClusHI = new byte[2];//High word of this entry’s first cluster number - 20 -> 22
         String hi = getValue(fis, DIR_FstClusHI, 8, 2);
+        this.currentLocation += 10;
         //System.out.println("Hi value: " + hi);//TEST
 
         /*byte[] DIR_WrtTime = new byte[2];//Time of last write - 22 -> 24
         byte[] DIR_WrtDate = new byte[2];//Date of last write - 24 -> 26*/
         byte[] DIR_FstClusLO = new byte[2];//Low word of this entry’s first cluster number - 26 -> 28
         String lo = getValue(fis, DIR_FstClusLO, 4, 2);
+        this.currentLocation += 6;
         //System.out.println("Lo value: " + lo);//TEST
         String clus = hi.concat(lo);
         //System.out.println("Cluster value: " + clus);//TEST
         dir.nextClusterNumber = Integer.parseInt(clus, 16);
-        System.out.println("next cluster number: 0x" + Integer.toHexString(dir.nextClusterNumber));
+        //System.out.println("next cluster number: 0x" + Integer.toHexString(dir.nextClusterNumber));//TEST
 
         byte[] DIR_FileSize = new byte[4];//32-bit DWORD holding this file’s size in bytes. - 28-32
         temp = getValue(fis, DIR_FileSize, 0, 4);
-        System.out.println("File size: 0x" + temp);
+        this.currentLocation += 4;
+        //System.out.println("File size: 0x" + temp);//TEST
         dir.size = Integer.parseInt(temp, 16);
-        return dir;
+        return true;
     }
 
     /**
@@ -266,6 +294,7 @@ public class Fat32Reader {
         else if(temp.equals("16"))//root
         {
             dir.attributes = "ATTR_DIRECTORY";
+            dir.containsFiles = true;
         }
         else if(temp.equals("32"))
         {
@@ -310,7 +339,7 @@ public class Fat32Reader {
      * Log an error to a file fat32.log if the file is already open, or if the file does not exist.
      * @param fName
      */
-    private void open(String fName)
+    private void open(String fName, FileInputStream fis) throws IOException
     {
         if(!exists(fName))
         {
@@ -322,7 +351,7 @@ public class Fat32Reader {
             LOGGER.log(Level.WARNING, "File " + fName + " is already open.");
             System.out.println("Error: already open");
         }
-        else if(isDirectory(fName))
+        else if(isDirectory(fName, fis))
         {
             LOGGER.log(Level.WARNING, "File " + fName + " is a directory and cannot be opened.");
             System.out.println("Error: cannot open a directory");
@@ -378,14 +407,13 @@ public class Fat32Reader {
      * DIR_NAME may be “.” (here) and “..” (up one directory).
      * @param dName
      */
-    private void cd(String dName)
-    {
+    private void cd(String dName, FileInputStream fis) throws IOException {
         if(!exists(dName))
         {
             LOGGER.log(Level.WARNING, dName + " does not exist.");
             System.out.println("Error: does not exist");
         }
-        else if(isDirectory(dName))
+        else if(isDirectory(dName, fis))
         {
             setHeader("/" + dName + getHeader());
             //change wd to fName
@@ -406,21 +434,50 @@ public class Fat32Reader {
         if(dName.equals("."))
         {
             //list current directory contents
-            for(Directory dir : fs.files)//TODO: change this - test
-            {
-                System.out.print(dir.name + "\t");
-            }
-            System.out.println();
+            printLs(this.fs.files);
         }
         else if(dName.equals(".."))
         {
             //list contents from one directory up
+            if(fs.parentDirectory != null)
+            {
+                printLs(fs.parentDirectory.files);//TODO: change this - test
+            }
+            else
+            {
+                LOGGER.log(Level.WARNING, dName + " not found.");
+                System.out.println("Error: not able to find file/directory");
+            }
         }
         else
         {
             //list directory contents
+            if(dName.equals(this.fs.name))
+            {
+                printLs(this.fs.files);
+            }
+            else
+            {
+                for(Directory dir : this.fs.files)
+                {
+                    if(dir.name.equals(dName))
+                    {
+                        printLs(dir.files);
+                        break;
+                    }
+                }
 
+            }
         }
+    }
+
+    private void printLs(ArrayList<Directory> currentDir)
+    {
+        for(Directory dir : currentDir)//TODO: change this - test?
+        {
+            System.out.print(dir.name + "\t");
+        }
+        System.out.println();
     }
 
     /**
@@ -479,24 +536,72 @@ public class Fat32Reader {
      * @param fName
      * @return
      */
-    private boolean isDirectory(String fName) {
+    private boolean isDirectory(String fName, FileInputStream fis) throws IOException
+    {
+        if(getDirectory(fName, fis).containsFiles == true)
+        {
+            return true;
+        }
         return false;
     }
 
-    private void stat(String fName)
-    {
-        System.out.println("Retrieving stats.");//TEST
-        if(fName.toLowerCase().equals(this.volumeName.toLowerCase()))
+    private void stat(String fName, FileInputStream fis) throws IOException {
+        //System.out.println("Retrieving stats.");//TEST
+        Directory dir;
+        if(fName.toLowerCase().equals(this.volumeName.toLowerCase()))//either it is current directory
         {
-            System.out.println("Size is " + fs.size);
-            System.out.println("Attributes " + fs.attributes);
-            System.out.println("Next cluster number is 0x" + Integer.toHexString(fs.nextClusterNumber));
+            dir = this.fs;//TODO: Change to currentDirectory;
+            printStats(dir);
         }
+        else //or directly within current directory
+        {
+            dir = getDirectory(fName, fis);
+            if(dir.name.length() > 0)
+            {
+                printStats(dir);
+            }
+            else
+            {
+                LOGGER.log(Level.WARNING, fName + " not found.");
+                System.out.println("Error: not a file/ directory");
+            }
+        }
+    }
+
+    private void printStats(Directory dir)
+    {
+        System.out.println("Size is " + dir.size);
+        System.out.println("Attributes " + dir.attributes);
+        System.out.println("Next cluster number is 0x" + Integer.toHexString(dir.nextClusterNumber));
+    }
+
+    /**
+     * TODO: correct this method
+     * @param fName
+     * @param fis
+     * @return
+     * @throws IOException
+     */
+    private Directory getDirectory(String fName, FileInputStream fis) throws IOException
+    {
+        Directory dir = new Directory();
+        //search through files in current directory to get relevant stats
+        for(int i = 0; i < 16; i++)
+        {
+            if (parseDirectory(fis, dir))
+            {
+                if (dir.name.equals(fName))
+                {
+                    return dir;
+                }
+            }
+        }
+        return dir;
     }
 
     private void volume()
     {
-        System.out.println("Retrieving volume.");//TEST
+        //System.out.println("Retrieving volume.");//TEST
         System.out.println("Volume name: " + this.volumeName);
     }
 
@@ -505,13 +610,13 @@ public class Fat32Reader {
         return (((n - 2) * this.boot.getBPB_SecPerClus()) + this.boot.getRootDirAddress());
     }
 
-    private int getFATSecNum(int FATOffset)
+    int getFATSecNum(int n)
     {
-        return this.boot.getBPB_RsvdSecCnt() + (FATOffset / this.boot.getBPB_BytesPerSec());
+        return this.boot.getBPB_RsvdSecCnt() + ((n * 4) / this.boot.getBPB_BytesPerSec());
     }
 
-    private int getFATEntOffset(int FATOffset)
+    int getFATEntOffset(int n)
     {
-        return (FATOffset % this.boot.getBPB_BytesPerSec());
+        return ((n * 4)  % this.boot.getBPB_BytesPerSec());
     }
 }
