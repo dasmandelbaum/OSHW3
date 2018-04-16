@@ -1,6 +1,6 @@
 # OSHW3
 
-## Jeffrey Hagler and David Mandelbaum - PART 1 SUBMISSION
+## Jeffrey Hagler and David Mandelbaum - PART 1 SUBMISSION (4/15/18)
 ## A listing of all files/directories in your submission and a brief description of each
   * Fat32Reader class - main command center for parsing file and user-run navigation
   * Boot class - used for info command
@@ -13,7 +13,7 @@
  2. volume 
  3. quit
  
-## Commands that in progress
+## Commands that are in progress
  1. ls 
  2. stat
  3. cd
@@ -25,6 +25,7 @@
     ```
     mvn clean compile exec:java -Dexec.mainClass="os.hw3.Fat32Reader" -Dexec.args="fat32.img" 
     ```
+ 3. Start inputting commands.
  
 ##	Challenges encountered along the way
  1. Still deciding on best way to balance using file live and pre-building for navigation
