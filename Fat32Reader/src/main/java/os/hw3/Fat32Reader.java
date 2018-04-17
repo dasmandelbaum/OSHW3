@@ -22,7 +22,7 @@ public class Fat32Reader {
     Boot boot;
     private FAT fat;
     private Directory fs;//TODO: change to currentLocation
-    private HashMap<String, Directory> openFiles;
+    //private HashMap<String, Directory> openFiles;
     private String volumeName;
     int currentLocation;
 
@@ -42,7 +42,7 @@ public class Fat32Reader {
         LOGGER.addHandler(fh);
         setHeader("/]");
         fs = new Directory();
-        openFiles = new HashMap<String, Directory>();
+        //openFiles = new HashMap<String, Directory>();
         currentLocation = 0;
     }
 
@@ -55,6 +55,7 @@ public class Fat32Reader {
         System.out.println("File exists: " + file.exists());//TEST
         System.out.println("Fat32 file path: " + file.getAbsolutePath());//TEST
         FileInputStream fis = new FileInputStream(file);
+        RandomAccessFile raf = new RandomAccessFile(file, "r");
         /* Parse boot sector and get information */
         fr.boot = new Boot(fis, fr);
 
@@ -68,7 +69,13 @@ public class Fat32Reader {
         System.out.println("Skipping to " + (startOfRootDirectory));
         fis.skip(startOfRootDirectory - fr.currentLocation);//subtract current location to see how much to skip
         fr.currentLocation = startOfRootDirectory;
-        fr.parseDirectories(fis);
+        //start with root
+        Directory dir = new Directory();
+        fr.parseDirectory(fis, dir);
+        fr.fs = dir;
+        int n = fr.fs.nextClusterNumber;
+        fr.fs.clusters = fr.getClusters(fr.getFATSecNum(n), fr.getFATEntOffset(n), fr.getAddress(fr.boot.getBPB_RsvdSecCnt()));
+        fr.parseDirectories(fis,fr.fs);
 
         /* Main loop.  You probably want to create a helper function for each command besides quit. */
         Scanner s = new Scanner(System.in);
@@ -164,28 +171,17 @@ public class Fat32Reader {
         return i * this.boot.getBPB_BytesPerSec();
     }
 
-    private void parseDirectories(FileInputStream fis) throws IOException
+    private void parseDirectories(FileInputStream fis, Directory dir) throws IOException
     {
-        //start with root
-        Directory dir = new Directory();
-        parseDirectory(fis, dir);
-        this.fs = dir;
-        //for any other directory listed after root
-        for(int i = 0; i < 16; i++)//TODO: change this
+        Directory newDir;
+        for(int j = 0; j < dir.clusters.size(); j++)//for each cluster in root
         {
-            //System.out.println("CURRENT LOCATION: " + this.currentLocation);//TEST
-//            int b = fis.read();
-//            String c = String.format("%02X", b);
-            //System.out.println(c);//TEST
-//            if(c.equals("95"))
-//            {
-//                break;
-//            }
-//            fis.skip(31);
-            dir = new Directory();
-            if(parseDirectory(fis, dir))
+            for (int i = 0; i < 16; i++)//for each 32 bit potential entry
             {
-                this.fs.files.add(dir);
+                newDir = new Directory();
+                if (parseDirectory(fis, dir)) {
+                    dir.files.add(newDir);
+                }
             }
         }
     }
@@ -417,7 +413,7 @@ public class Fat32Reader {
         else if(isDirectory(dName, fis))
         {
             setHeader("/" + dName + getHeader());
-            //change wd to fName
+            //get clusters from fat
         }
         else
         {
@@ -619,5 +615,17 @@ public class Fat32Reader {
     int getFATEntOffset(int n)
     {
         return ((n * 4)  % this.boot.getBPB_BytesPerSec());
+    }
+
+    private ArrayList<Integer> getClusters(int fatSecNum, int fatEntOffset, int address)
+    {
+        ArrayList<Integer> clusters = new ArrayList<Integer>();
+        //go to beginning of fat
+        //raf.seek(address);
+        //for current file/directory, get arraylist of cluster numbers related to that file/directory
+        //byte nextClus = fatTable[fatSecNum * 32];
+        //String nextClusString = String.format("%8s", Integer.toBinaryString(nextClus & 0xFF)).replace(' ', '0');//https://stackoverflow.com/questions/12310017/how-to-convert-a-byte-to-its-binary-string-representation
+        //return Integer.parseInt(nextClusString, 16);
+        return clusters;
     }
 }

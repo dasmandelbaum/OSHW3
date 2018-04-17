@@ -20,7 +20,8 @@ public class Directory
         Stats to print
      */
     int size;
-    int nextClusterNumber;
+    int nextClusterNumber;//change to first cluster number
+    ArrayList<Integer> clusters;
     String attributes;
     /*
         Field for reading
@@ -30,6 +31,7 @@ public class Directory
     public Directory()
     {
         files = new ArrayList<Directory>();
+        clusters = new ArrayList<Integer>();
     }
 
 
