@@ -174,22 +174,18 @@ public class Fat32Reader {
         for(int i = 0; i < 16; i++)//TODO: change this
         {
             //System.out.println("CURRENT LOCATION: " + this.currentLocation);//TEST
-            int b = fis.read();
-            String c = String.format("%02X", b);
+//            int b = fis.read();
+//            String c = String.format("%02X", b);
             //System.out.println(c);//TEST
-            if(c.equals("95"))
-            {
-                break;
-            }
-            fis.skip(31);
+//            if(c.equals("95"))
+//            {
+//                break;
+//            }
+//            fis.skip(31);
             dir = new Directory();
             if(parseDirectory(fis, dir))
             {
                 this.fs.files.add(dir);
-            }
-            else //done with directories in root
-            {
-                break;
             }
         }
     }
@@ -202,22 +198,22 @@ public class Fat32Reader {
         fis.read(DIR_Name, 0, 11);
         this.currentLocation += 11;
         //System.out.println(DIR_Name[0]);//TEST
-        if(DIR_Name[0] == 95)//TODO CHANGE THIS
-        {
-            //done with directories
-            return false;
-        }
+//        if(DIR_Name[0] == 95)//TODO CHANGE THIS
+//        {
+//            //done with directories
+//            return false;
+//        }
         String byteString = new String(DIR_Name, "UTF-8");//https://stackoverflow.com/a/18583290
         //System.out.println(byteString);//TEST
         String[] splitName = byteString.split(" +");
         if(splitName.length == 2)
         {
             dir.name = splitName[0] + "." + splitName[1];
-            dir.name = dir.name.toLowerCase();
+            dir.name = dir.name.toLowerCase().trim();
         }
         else
         {
-            dir.name = byteString;
+            dir.name = byteString.toLowerCase().trim();
         }
         //System.out.println("name: " + dir.name);//TEST
 
@@ -232,8 +228,13 @@ public class Fat32Reader {
             //System.out.printf("%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
             temp += b;//String.format("%02X", b);
         }
-        //System.out.println("attribute: " + temp);//TEST
+        System.out.println("attribute: " + temp);//TEST
         //TODO: what about longname?
+        if(!temp.equals("1") && !temp.equals("2") && !temp.equals("4") && !temp.equals("8") && !temp.equals("16") && !temp.equals("32"))
+        {
+            fis.skip(20);
+            return false;
+        }
         setAttribute(dir, byteString, temp);
 
         /*byte[] DIR_NTRes = new byte[1];//used by WindowsNT (?) - 12 -> 13
@@ -291,7 +292,7 @@ public class Fat32Reader {
             dir.attributes = "ATTR_VOLUME_ID";
             this.volumeName = byteString.substring(0, byteString.indexOf(" "));
         }
-        else if(temp.equals("16"))//root
+        else if(temp.equals("16"))
         {
             dir.attributes = "ATTR_DIRECTORY";
             dir.containsFiles = true;
