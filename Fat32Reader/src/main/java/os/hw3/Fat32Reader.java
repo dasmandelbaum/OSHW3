@@ -57,8 +57,7 @@ public class Fat32Reader {
         FileInputStream fis = new FileInputStream(file);
         RandomAccessFile raf = new RandomAccessFile(file, "r");
         /* Parse boot sector and get information */
-        fr.boot = new Boot(fis, fr);
-
+        fr.boot = new Boot(raf, fr);
         /* Create FAT table for reference */
         fr.fat = new FAT(fis, fr, fr.getAddress(fr.boot.getBPB_RsvdSecCnt()));
         System.out.println("FAT created with size " + fr.fat.fatSize);

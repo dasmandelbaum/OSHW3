@@ -1,7 +1,7 @@
 package os.hw3;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 
 /**
  * This class contains important fields from the boot sector of the FAT32 file system.
@@ -19,35 +19,38 @@ class Boot
 
     /**
      * Set the BPB data fields
-     * @param fis
+     * @param raf
      * @throws IOException
      */
-    Boot(FileInputStream fis, Fat32Reader fr) throws IOException
+    Boot(RandomAccessFile raf, Fat32Reader fr) throws IOException
     {
-        BPB_BytesPerSec = setValue(fis, 11, 2, 11);
-        BPB_SecPerClus = setValue(fis, 13, 1, 0);
-        BPB_RsvdSecCnt = setValue(fis, 14, 2, 0);
-        BPB_NumFATS = setValue(fis, 16, 1, 0);
-        BPB_FATSz32 = setValue(fis, 36, 4, 19);
+        BPB_BytesPerSec = setValue(raf, 11, 2, 11);//11->13
+        BPB_SecPerClus = setValue(raf, 13, 1, 0);//13->14
+        BPB_RsvdSecCnt = setValue(raf, 14, 2, 0);//14->16
+        BPB_NumFATS = setValue(raf, 16, 1, 0);//16->17
+        BPB_FATSz32 = setValue(raf, 36, 4, 36);//36->40
         rootDirAddress = (getBPB_NumFATS() * getBPB_FATSz32()) + getBPB_RsvdSecCnt();
         fr.currentLocation = 40;
     }
 
     /**
      * given a file stream, length of the field, and amount to skip (can be zero), return the integer value of the field
-     * @param fis
+     * @param raf
      * @param offset
      * @param length
-     * @param skip
+     * @param seek
      * @return
      * @throws IOException
      */
-    private int setValue(FileInputStream fis, int offset, int length, int skip) throws IOException
+    private int setValue(RandomAccessFile raf, int offset, int length, int seek) throws IOException
     {
         byte[] buffer = new byte[length];
         //System.out.println("Buffer size: " + buffer.length);//TEST
-        fis.skip(skip);
-        fis.read(buffer, 0, length);
+        if(seek != 0)
+        {
+            raf.seek(seek);
+        }
+        raf.read(buffer, 0, length);
         String temp = "";
         //turn into hex string
         for(int i = buffer.length - 1; i >= 0; i--)
