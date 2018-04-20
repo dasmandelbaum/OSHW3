@@ -40,7 +40,7 @@ public class Fat32Reader {
         LOGGER.setLevel(Level.INFO);
         fh = new FileHandler("fat32.log");
         LOGGER.addHandler(fh);
-        setHeader("/]");
+        setHeader("/");
         fs = new Directory();
         //openFiles = new HashMap<String, Directory>();
         currentLocation = 0;
@@ -88,7 +88,7 @@ public class Fat32Reader {
         while(true)
         {
             //System.out.println("/]");
-            System.out.print(fr.getHeader());//print prompt
+            System.out.print(fr.getHeader() + "]");//print prompt
             input = s.nextLine().toLowerCase();
             inputParts = input.split(" ");
             String command = inputParts[0];
@@ -240,7 +240,7 @@ public class Fat32Reader {
         {
             dir.name = byteString.toLowerCase().trim();
         }
-        //System.out.println("name: " + dir.name);//TEST
+        //System.out.println("This is the directorie's name: " + dir.name);//TEST
 
 
         byte[] DIR_Attr = new byte[1];//file attributes - 11 -> 12
@@ -387,7 +387,16 @@ public class Fat32Reader {
         else if(dName.equals(".."))
         {
             this.fs = this.fs.parentDirectory;
-            setHeader(getHeader().substring(0, getHeader().indexOf(dName)));
+            //check if cd .. is root directory
+        		if(this.fs.parentDirectory == null) {
+        			setHeader("/");
+        		}
+        		else {
+	            //go to the "/" after the parent directory
+	            int parentDirectoryIndex = getHeader().indexOf(this.fs.name) + this.fs.name.length() +1 ;
+	            String test = getHeader().substring(0, parentDirectoryIndex);
+	            setHeader(test);
+        		}
         }
         else if(dName.equals("."))
         {
@@ -398,7 +407,7 @@ public class Fat32Reader {
             Directory dir = isDirectory(dName, raf);
             if(dir != null)
             {
-                setHeader("/" + dName + getHeader());
+                setHeader(getHeader() + dName + "/");
                 this.fs = dir;//now it is current working directory
                 //parse through its contents and set to current directory
                 int n = this.fs.nextClusterNumber;
