@@ -66,21 +66,18 @@ public class Fat32Reader {
         int startOfRootDirectory = fr.getAddress(fr.boot.getRootDirAddress());
         System.out.println("rootDirAddress is 0x" + Integer.toHexString(fr.boot.getRootDirAddress()) + ", " + fr.boot.getRootDirAddress());
         System.out.println("Skipping to " + (startOfRootDirectory));
-   //     fis.skip(startOfRootDirectory - fr.currentLocation);//subtract current location to see how much to skip
         fr.currentLocation = startOfRootDirectory;
-        raf.seek(fr.currentLocation);
+        //raf.seek(fr.currentLocation);
 
         //start with root
         Directory dir = new Directory();
-    //    fr.parseDirectory(fis, dir);
         fr.parseCluster(raf, dir);//just for the root
 
         fr.fs = dir;//set to current directory
         fr.fs.parentDirectory = null;
         int n = fr.boot.getBPB_RootClus();//fr.fs.nextClusterNumber;
         System.out.println("Root clus: " + n);
-        fr.fs.clusters = fr.getClusters(raf, fr.getFATSecNum(n), fr.getFATEntOffset(n));
-  //      fr.parseDirectories(fis,fr.fs);
+        fr.fs.clusters = fr.getClusters(raf, fr.getFATSecNum(n), fr.getFATEntOffset(n), fr.fs.nextClusterNumber);
         fr.parseDirectories(raf,fr.fs);
 
         
@@ -99,18 +96,7 @@ public class Fat32Reader {
             if(inputParts.length == 2)
             {
                 String fName = inputParts[1];
-                if (command.equals("open"))
-                {
-                    System.out.println("Going to open!");
-    //                fr.open(fName, fis);
-                    fr.open(fName, raf);
-                }
-                else if (command.equals("close"))
-                {
-                    System.out.println("Going to close!");
-                    fr.close(fName);
-                }
-                else if (command.equals("size"))
+                if (command.equals("size"))
                 {
                     System.out.println("Going to size!");
                     fr.size(fName);
@@ -140,7 +126,7 @@ public class Fat32Reader {
             else if(inputParts.length == 4 && command.equals("read"))
             {
                 System.out.println("Going to read!");
-                fr.read(inputParts[1], inputParts[2], inputParts[3]);
+                fr.read(raf, inputParts[1], inputParts[2], inputParts[3]);
             }
             else if(inputParts.length == 1)
             {
@@ -177,6 +163,11 @@ public class Fat32Reader {
         /* Success */
     }
 
+    /**
+     * Return address of cluster
+     * @param i
+     * @return
+     */
     private int getAddress(int i)
     {
         return i * this.boot.getBPB_BytesPerSec();
@@ -188,14 +179,29 @@ public class Fat32Reader {
         //parse directory
         for(int j = 0; j < this.fs.clusters.size(); j++)//for each cluster in directory
         {
-            raf.seek(dir.clusters.get(j));
-            //parse cluster
+            if(dir.parentDirectory != null) //not the root
+            {
+                int clusterAddress = this.boot.getRootDirAddress() + dir.clusters.get(j) - this.boot.getBPB_RootClus();
+                clusterAddress = getAddress(clusterAddress);
+                raf.seek(clusterAddress);
+                this.currentLocation = clusterAddress;
+                System.out.println("Parsing in Cluster address " + Integer.toHexString(clusterAddress) + " from cluster " + dir.clusters.get(j));
+            }
+                //parse cluster
             for (int i = 0; i < 16; i++)//parse each 32 bit potential entry
             {
                 newDir = new Directory();
                 if (parseCluster(raf, newDir))
                 {
-                    dir.files.add(newDir);
+                    if(!newDir.name.equals("done"))
+                    {
+                        newDir.parentDirectory = dir;
+                        dir.files.add(newDir);
+                    }
+                    else //found 00 as first byte, done with directory
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -203,17 +209,25 @@ public class Fat32Reader {
 
     private boolean parseCluster(RandomAccessFile raf, Directory dir) throws IOException
     {
+        //System.out.println("CURRENT LOCATION BEGINNING OF PARSE: " + this.currentLocation);
         //byte[] buffer = new byte[32];
         //fis.read(buffer, 0, 32);
         byte[] DIR_Name = new byte[11];//short name - 0 -> 11
         raf.read(DIR_Name, 0, 11);
         this.currentLocation += 11;
-        //System.out.println(DIR_Name[0]);//TEST
-//        if(DIR_Name[0] == 95)//TODO CHANGE THIS
-//        {
-//            //done with directories
-//            return false;
-//        }
+        System.out.println(DIR_Name[0]);//TEST
+        if(DIR_Name[0] == 0xe5)//TODO CHANGE THIS
+        {
+            //done with directories
+            this.currentLocation += 21;
+            raf.seek(this.currentLocation);
+            return false;
+        }
+        else if(DIR_Name[0] == 00)
+        {
+            dir.name = "done";
+            return true;
+        }
         String byteString = new String(DIR_Name, "UTF-8");//https://stackoverflow.com/a/18583290
         //System.out.println(byteString);//TEST
         String[] splitName = byteString.split(" +");
@@ -244,24 +258,16 @@ public class Fat32Reader {
         if(!temp.equals("1") && !temp.equals("2") && !temp.equals("4") && !temp.equals("8") && !temp.equals("16") && !temp.equals("32"))
         {
             this.currentLocation += 20;
-        		raf.seek(this.currentLocation);
+            raf.seek(this.currentLocation);
             return false;
         }
         setAttribute(dir, byteString, temp);
-
-        /*byte[] DIR_NTRes = new byte[1];//used by WindowsNT (?) - 12 -> 13
-        byte[] CrtTimeTenth = new byte[1];//Millisecond stamp at file creation time (count of tenths of a second) - 13 ->14
-        byte[] DIR_CrtTime = new byte[2];//Time file was created - 14 -> 16
-        byte[] DIR_CrtDate = new byte[2];//Date file was created - 16 -> 18
-        byte[] DIR_LstAccDate = new byte[2];//Last access date - 18 ->20*/
 
         byte[] DIR_FstClusHI = new byte[2];//High word of this entry’s first cluster number - 20 -> 22
         String hi = getValue(raf, DIR_FstClusHI, 8, 2);
         this.currentLocation += 10;
         //System.out.println("Hi value: " + hi);//TEST
 
-        /*byte[] DIR_WrtTime = new byte[2];//Time of last write - 22 -> 24
-        byte[] DIR_WrtDate = new byte[2];//Date of last write - 24 -> 26*/
         byte[] DIR_FstClusLO = new byte[2];//Low word of this entry’s first cluster number - 26 -> 28
         String lo = getValue(raf, DIR_FstClusLO, 4, 2);
         this.currentLocation += 6;
@@ -272,6 +278,7 @@ public class Fat32Reader {
         //System.out.println("next cluster number: 0x" + Integer.toHexString(dir.nextClusterNumber));//TEST
 
         byte[] DIR_FileSize = new byte[4];//32-bit DWORD holding this file’s size in bytes. - 28-32
+        //System.out.println("CURRENT LOCATION END OF PARSE: " + this.currentLocation);
         temp = getValue(raf, DIR_FileSize, 0, 4);
         this.currentLocation += 4;
         //System.out.println("File size: 0x" + temp);//TEST
@@ -317,7 +324,7 @@ public class Fat32Reader {
 
 
     private String getValue(RandomAccessFile raf, byte[] buffer, int skip, int size) throws IOException {
-    		raf.seek(this.currentLocation + skip);  //do I even need this seek anymore?
+        raf.seek(this.currentLocation + skip);  //do I even need this seek anymore?
         raf.read(buffer, 0, size);
         String temp = "";
         for(int i = buffer.length - 1; i >= 0; i--)
@@ -347,54 +354,6 @@ public class Fat32Reader {
     }
 
     /**
-     * adds a file named FILE_NAME in the present working directory to an open-file table in your program.
-     * A file may only be read from if it is opened first.
-     * Log an error to a file fat32.log if the file is already open, or if the file does not exist.
-     * @param fName
-     */
-    private void open(String fName, RandomAccessFile raf) throws IOException
-    {
-        if(!exists(fName))
-        {
-            LOGGER.log(Level.WARNING, "File " + fName + " does not exist.");
-            System.out.println("Error: does not exist");
-        }
-        else if(isOpen(fName))
-        {
-            LOGGER.log(Level.WARNING, "File " + fName + " is already open.");
-            System.out.println("Error: already open");
-        }
-        else if(isDirectory(fName, raf))
-        {
-            LOGGER.log(Level.WARNING, "File " + fName + " is a directory and cannot be opened.");
-            System.out.println("Error: cannot open a directory");
-        }
-        else //exists and is not yet open nor is directory
-        {
-            //open file
-        }
-
-    }
-
-    /**
-     * removes a file from the open-file table.
-     * Log an error if the file is not open.
-     * @param fName
-     */
-    private void close(String fName)
-    {
-        if(isOpen(fName))
-        {
-            //close file
-        }
-        else
-        {
-            LOGGER.log(Level.WARNING,"File " + fName + " not in open file table.");
-            System.out.println("Error: file not in open file table");
-        }
-    }
-
-    /**
      * prints the size of file FILE_NAME in the present working directory.
      * Log an error if FILE_NAME does not exist.
      * @param fName
@@ -418,22 +377,43 @@ public class Fat32Reader {
      * DIR_NAME may be “.” (here) and “..” (up one directory).
      * @param dName
      */
-    private void cd(String dName, RandomAccessFile raf) throws IOException {
+    private void cd(String dName, RandomAccessFile raf) throws IOException
+    {
         if(!exists(dName))
         {
             LOGGER.log(Level.WARNING, dName + " does not exist.");
             System.out.println("Error: does not exist");
         }
-        else if(isDirectory(dName, raf))
+        else if(dName.equals(".."))
         {
-            setHeader("/" + dName + getHeader());
-            //get clusters from fat
+            this.fs = this.fs.parentDirectory;
+            setHeader(getHeader().substring(0, getHeader().indexOf(dName)));
+        }
+        else if(dName.equals("."))
+        {
+
         }
         else
         {
-            LOGGER.log(Level.WARNING, dName + " is not a directory.");
-            System.out.println("Error: not a directory");
+            Directory dir = isDirectory(dName, raf);
+            if(dir != null)
+            {
+                setHeader("/" + dName + getHeader());
+                this.fs = dir;//now it is current working directory
+                //parse through its contents and set to current directory
+                int n = this.fs.nextClusterNumber;
+                this.fs.clusters = this.getClusters(raf, this.getFATSecNum(n), this.getFATEntOffset(n), this.fs.nextClusterNumber);
+                this.fs.clusters.add(this.fs.nextClusterNumber);
+                this.parseDirectories(raf,this.fs);
+            }
+
+            else
+            {
+                LOGGER.log(Level.WARNING, dName + " is not a directory.");
+                System.out.println("Error: not a directory");
+            }
         }
+
     }
 
     /**
@@ -483,32 +463,50 @@ public class Fat32Reader {
 
     /**
      * reads from a file named FILE_NAME, starting at POSITION, and prints NUM_BYTES.
-     * Return an error when trying to read an unopened file.
      * @param fName
      * @param position
      * @param num_bytes
      */
-    private void read(String fName, String position, String num_bytes)
-    {
-        if(isOpen(fName))
+    private void read(RandomAccessFile raf, String fName, String position, String num_bytes) throws IOException {
+        for(Directory dir: this.fs.files)
         {
-            //read file
-            try
+            if(dir.name.equals(fName) && dir.containsFiles == false)//dealing with file not directory
             {
-                //TODO: take file contents and print them out
-//                RandomAccessFile raf = new RandomAccessFile(getFile(fName), "r");
-//                raf.read();
+                //read file
+                try
+                {
+                    //take file contents and print them out
+                    int positionInt = Integer.parseInt(position);
+                    int n = dir.nextClusterNumber;
+                    System.out.println("NextClusterNumber is: " + n);
+                    dir.clusters = this.getClusters(raf, this.getFATSecNum(n), this.getFATEntOffset(n), n);
+                    byte[] newLine = new byte[Integer.parseInt(num_bytes)];
+                    System.out.println(newLine[newLine.length - 1]);
+                    for(int i: dir.clusters)
+                    {
+                        int clusterAddress = this.boot.getRootDirAddress() + i - this.boot.getBPB_RootClus();
+                        clusterAddress = getAddress(clusterAddress) + positionInt;
+                        raf.seek(clusterAddress);
+                        this.currentLocation = clusterAddress;
+                        System.out.println("Accessing cluster address " + Integer.toHexString(clusterAddress) + " from cluster " + i);
+                        //raf.seek(Integer.parseInt(position));
+                        raf.read(newLine, 0, newLine.length);
+                        this.currentLocation += newLine.length;
+                        if(newLine[newLine.length - 1] != 0)
+                        {
+                            break;
+                        }
+                        positionInt = 0;
+                    }
+                    String lineString = new String(newLine, "UTF-8");
+                    System.out.println(lineString);
+                }
+                catch(Exception E)
+                {
+                    LOGGER.log(Level.WARNING,"File " + fName + " error: attempt to read beyond EoF.");
+                    System.out.println("Error: attempt to read beyond EoF");
+                }
             }
-            catch(Exception E)
-            {
-                LOGGER.log(Level.WARNING,"File " + fName + " error: attempt to read beyond EoF.");
-                System.out.println("Error: attempt to read beyond EoF");
-            }
-        }
-        else
-        {
-            LOGGER.log(Level.WARNING,"File " + fName + " is closed.");
-            System.out.println("Error: file not in open file table");
         }
     }
 
@@ -519,17 +517,21 @@ public class Fat32Reader {
      */
     private boolean exists(String fName)
     {
+        if(fName.equals("..") || this.fs.parentDirectory != null)
+        {
+            return true;
+        }
+        else
+        {
+            for(Directory dir: this.fs.files)
+            {
+                if(dir.name.equals(fName))
+                {
+                    return true;
+                }
+            }
+        }
         return false;
-    }
-
-    /**
-     * Check to see if file is open already or not
-     * @param fName
-     * @return
-     */
-    private boolean isOpen(String fName)
-    {
-       return false;
     }
 
     /**
@@ -537,13 +539,21 @@ public class Fat32Reader {
      * @param fName
      * @return
      */
-    private boolean isDirectory(String fName, RandomAccessFile raf) throws IOException
+    private Directory isDirectory(String fName, RandomAccessFile raf) throws IOException
     {
-        if(getDirectory(fName, raf).containsFiles == true)
+        //search through files in current directory to get relevant stats
+        for(Directory dir: this.fs.files)
         {
-            return true;
+
+            if (dir.name.equals(fName))
+            {
+                if(dir.containsFiles == true)
+                {
+                    return dir;
+                }
+            }
         }
-        return false;
+        return null;
     }
 
     private void stat(String fName, RandomAccessFile raf) throws IOException {
@@ -581,29 +591,6 @@ public class Fat32Reader {
         System.out.println("Next cluster number is 0x" + Integer.toHexString(dir.nextClusterNumber));
     }
 
-    /**
-     * TODO: correct this method
-     * @param fName
-     * @param
-     * @return
-     * @throws IOException
-     */
-    private Directory getDirectory(String fName, RandomAccessFile raf) throws IOException
-    {
-        Directory dir = new Directory();
-        //search through files in current directory to get relevant stats
-        for(int i = 0; i < 16; i++)
-        {
-            if (parseCluster(raf, dir))
-            {
-                if (dir.name.equals(fName))
-                {
-                    return dir;
-                }
-            }
-        }
-        return dir;
-    }
 
     private void volume()
     {
@@ -626,22 +613,23 @@ public class Fat32Reader {
         return ((n * 4)  % this.boot.getBPB_BytesPerSec());
     }
 
-    private ArrayList<Integer> getClusters(RandomAccessFile raf, int fatSecNum, int fatEntOffset) throws IOException
+    private ArrayList<Integer> getClusters(RandomAccessFile raf, int fatSecNum, int fatEntOffset, int firstClusterNumber) throws IOException
     {
         ArrayList<Integer> clusters = new ArrayList<Integer>();
         byte[] value = new byte[4];
         String valueString = "";
         //go to beginning of fat
         int clusterEntryAddress;
-        while(!valueString.equals("0FFFFFF8"))
+        while(!valueString.equals("0FFFFFF8") && !valueString.equals("0FFFFFFF") && !valueString.equals("FFFFFFFF"))
         {
             valueString = "";
             //System.out.println("FatSecNum: " + fatSecNum);
             System.out.println("FatEntryOffest: " + fatEntOffset);
-            clusterEntryAddress = getAddress(fatSecNum) + 8;// + fatEntOffset;// (fatSecNum * 4);
+            clusterEntryAddress = getAddress(fatSecNum) + fatEntOffset;// (fatSecNum * 4);
             System.out.println("Address of fat entry: " + Integer.toHexString(clusterEntryAddress));
             raf.seek(clusterEntryAddress);//clusterEntryAddress);
             raf.read(value, 0, 4);
+            //this.currentLocation = clusterEntryAddress + 4;
             for(int i = value.length - 1; i >= 0; i--)
             {
                 byte b = value[i];
@@ -650,16 +638,19 @@ public class Fat32Reader {
             }
             System.out.println("Value in string: " + valueString);
             int clusterNum = Integer.parseInt(valueString, 16);
-            System.out.println("Cluster number: " + clusterNum);
-            clusters.add(clusterNum);
+            if(!valueString.equals("0FFFFFF8") && !valueString.equals("0FFFFFFF") && !valueString.equals("FFFFFFFF"))
+            {
+                System.out.println("Cluster number: " + clusterNum);
+                clusters.add(clusterNum);
+            }
+            else
+            {
+                clusters.add(0, firstClusterNumber);
+            }
             //fatSecNum = getFATSecNum(clusterNum);
             fatEntOffset = getFATEntOffset(clusterNum);
         }
-
-        //for current file/directory, get arraylist of cluster numbers related to that file/directory
-        //byte nextClus = fatTable[fatSecNum * 32];
-        //String nextClusString = String.format("%8s", Integer.toBinaryString(nextClus & 0xFF)).replace(' ', '0');//https://stackoverflow.com/questions/12310017/how-to-convert-a-byte-to-its-binary-string-representation
-        //return Integer.parseInt(nextClusString, 16);
+        System.out.println("Cluster list size: " + clusters.size());
         return clusters;
     }
 }
