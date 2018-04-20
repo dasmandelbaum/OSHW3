@@ -73,11 +73,13 @@ public class Fat32Reader {
         //start with root
         Directory dir = new Directory();
     //    fr.parseDirectory(fis, dir);
-        fr.parseDirectory(raf, dir);
+        fr.parseCluster(raf, dir);//just for the root
 
-        fr.fs = dir;
-        int n = fr.fs.nextClusterNumber;
-        fr.fs.clusters = fr.getClusters(fr.getFATSecNum(n), fr.getFATEntOffset(n), fr.getAddress(fr.boot.getBPB_RsvdSecCnt()));
+        fr.fs = dir;//set to current directory
+        fr.fs.parentDirectory = null;
+        int n = fr.boot.getBPB_RootClus();//fr.fs.nextClusterNumber;
+        System.out.println("Root clus: " + n);
+        fr.fs.clusters = fr.getClusters(raf, fr.getFATSecNum(n), fr.getFATEntOffset(n));
   //      fr.parseDirectories(fis,fr.fs);
         fr.parseDirectories(raf,fr.fs);
 
@@ -86,7 +88,8 @@ public class Fat32Reader {
         Scanner s = new Scanner(System.in);
         String input;
         String[] inputParts;
-        while(true) {
+        while(true)
+        {
             //System.out.println("/]");
             System.out.print(fr.getHeader());//print prompt
             input = s.nextLine().toLowerCase();
@@ -182,19 +185,23 @@ public class Fat32Reader {
     private void parseDirectories(RandomAccessFile raf, Directory dir) throws IOException
     {
         Directory newDir;
-        for(int j = 0; j < dir.clusters.size(); j++)//for each cluster in root
+        //parse directory
+        for(int j = 0; j < this.fs.clusters.size(); j++)//for each cluster in directory
         {
-            for (int i = 0; i < 16; i++)//for each 32 bit potential entry
+            raf.seek(dir.clusters.get(j));
+            //parse cluster
+            for (int i = 0; i < 16; i++)//parse each 32 bit potential entry
             {
                 newDir = new Directory();
-                if (parseDirectory(raf, dir)) {
+                if (parseCluster(raf, newDir))
+                {
                     dir.files.add(newDir);
                 }
             }
         }
     }
 
-    private boolean parseDirectory(RandomAccessFile raf, Directory dir) throws IOException
+    private boolean parseCluster(RandomAccessFile raf, Directory dir) throws IOException
     {
         //byte[] buffer = new byte[32];
         //fis.read(buffer, 0, 32);
@@ -232,7 +239,7 @@ public class Fat32Reader {
             //System.out.printf("%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
             temp += b;//String.format("%02X", b);
         }
-        System.out.println("attribute: " + temp);//TEST
+        //System.out.println("attribute: " + temp);//TEST
         //TODO: what about longname?
         if(!temp.equals("1") && !temp.equals("2") && !temp.equals("4") && !temp.equals("8") && !temp.equals("16") && !temp.equals("32"))
         {
@@ -369,8 +376,6 @@ public class Fat32Reader {
 
     }
 
-
-
     /**
      * removes a file from the open-file table.
      * Log an error if the file is not open.
@@ -433,46 +438,36 @@ public class Fat32Reader {
 
     /**
     * lists the contents of DIR_NAME, including “.” and “..”
+     * Cannot do "ls .." need to "cd .." first
     * @param dName
      */
     private void ls(String dName)
     {
-        if(dName.equals("."))
+        if(dName.equals(".") || (dName.equals(this.fs.name)))
         {
             //list current directory contents
             printLs(this.fs.files);
         }
-        else if(dName.equals(".."))
+        else if(dName.equals("..") && (this.fs.parentDirectory != null))
         {
-            //list contents from one directory up
-            if(fs.parentDirectory != null)
-            {
-                printLs(fs.parentDirectory.files);//TODO: change this - test
-            }
-            else
-            {
-                LOGGER.log(Level.WARNING, dName + " not found.");
-                System.out.println("Error: not able to find file/directory");
-            }
+            printLs(this.fs.parentDirectory.files);
         }
         else
         {
-            //list directory contents
-            if(dName.equals(this.fs.name))
+            boolean dirCheck = false;
+            for(Directory dir : this.fs.files)
             {
-                printLs(this.fs.files);
-            }
-            else
-            {
-                for(Directory dir : this.fs.files)
+                if(dir.name.equals(dName))
                 {
-                    if(dir.name.equals(dName))
-                    {
-                        printLs(dir.files);
-                        break;
-                    }
+                    printLs(dir.files);
+                    dirCheck = true;
+                    break;
                 }
-
+            }
+            if(dirCheck == false)
+            {
+                LOGGER.log(Level.WARNING, dName + " is not a directory.");
+                System.out.println("Error: not a directory");
             }
         }
     }
@@ -553,23 +548,28 @@ public class Fat32Reader {
 
     private void stat(String fName, RandomAccessFile raf) throws IOException {
         //System.out.println("Retrieving stats.");//TEST
-        Directory dir;
-        if(fName.toLowerCase().equals(this.volumeName.toLowerCase()))//either it is current directory
+        //Directory dir;
+        boolean dirCheck = false;
+        if(fName.equals(".") || (fName.equals(this.fs.name)))
         {
-            dir = this.fs;//TODO: Change to currentDirectory;
-            printStats(dir);
+            //list current directory contents
+            printStats(this.fs);
         }
-        else //or directly within current directory
+        else if(fName.equals("..") && (this.fs.parentDirectory != null))
         {
-            dir = getDirectory(fName, raf);
-            if(dir.name.length() > 0)
-            {
-                printStats(dir);
+            printStats(this.fs.parentDirectory);
+        }
+        else {
+            for (Directory dir : this.fs.files) {
+                if (dir.name.equals(fName)) {
+                    printStats(dir);
+                    dirCheck = true;
+                    break;
+                }
             }
-            else
-            {
-                LOGGER.log(Level.WARNING, fName + " not found.");
-                System.out.println("Error: not a file/ directory");
+            if (dirCheck == false) {
+                LOGGER.log(Level.WARNING, fName + " is not a directory.");
+                System.out.println("Error: not a directory");
             }
         }
     }
@@ -584,7 +584,7 @@ public class Fat32Reader {
     /**
      * TODO: correct this method
      * @param fName
-     * @param fis
+     * @param
      * @return
      * @throws IOException
      */
@@ -594,7 +594,7 @@ public class Fat32Reader {
         //search through files in current directory to get relevant stats
         for(int i = 0; i < 16; i++)
         {
-            if (parseDirectory(raf, dir))
+            if (parseCluster(raf, dir))
             {
                 if (dir.name.equals(fName))
                 {
@@ -626,11 +626,36 @@ public class Fat32Reader {
         return ((n * 4)  % this.boot.getBPB_BytesPerSec());
     }
 
-    private ArrayList<Integer> getClusters(int fatSecNum, int fatEntOffset, int address)
+    private ArrayList<Integer> getClusters(RandomAccessFile raf, int fatSecNum, int fatEntOffset) throws IOException
     {
         ArrayList<Integer> clusters = new ArrayList<Integer>();
+        byte[] value = new byte[4];
+        String valueString = "";
         //go to beginning of fat
-        //raf.seek(address);
+        int clusterEntryAddress;
+        while(!valueString.equals("0FFFFFF8"))
+        {
+            valueString = "";
+            //System.out.println("FatSecNum: " + fatSecNum);
+            System.out.println("FatEntryOffest: " + fatEntOffset);
+            clusterEntryAddress = getAddress(fatSecNum) + 8;// + fatEntOffset;// (fatSecNum * 4);
+            System.out.println("Address of fat entry: " + Integer.toHexString(clusterEntryAddress));
+            raf.seek(clusterEntryAddress);//clusterEntryAddress);
+            raf.read(value, 0, 4);
+            for(int i = value.length - 1; i >= 0; i--)
+            {
+                byte b = value[i];
+                System.out.printf("0x%02X\n", b);//https://stackoverflow.com/a/1748044//TEST
+                valueString += String.format("%02X", b);
+            }
+            System.out.println("Value in string: " + valueString);
+            int clusterNum = Integer.parseInt(valueString, 16);
+            System.out.println("Cluster number: " + clusterNum);
+            clusters.add(clusterNum);
+            //fatSecNum = getFATSecNum(clusterNum);
+            fatEntOffset = getFATEntOffset(clusterNum);
+        }
+
         //for current file/directory, get arraylist of cluster numbers related to that file/directory
         //byte nextClus = fatTable[fatSecNum * 32];
         //String nextClusString = String.format("%8s", Integer.toBinaryString(nextClus & 0xFF)).replace(' ', '0');//https://stackoverflow.com/questions/12310017/how-to-convert-a-byte-to-its-binary-string-representation
