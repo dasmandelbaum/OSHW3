@@ -1,26 +1,4 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE log SYSTEM "logger.dtd">
 <log>
-<record>
-  <date>2018-04-22T15:31:54</date>
-  <millis>1524425514465</millis>
-  <sequence>0</sequence>
-  <logger>global</logger>
-  <level>WARNING</level>
-  <class>os.hw3.Fat32Reader</class>
-  <method>read</method>
-  <thread>1</thread>
-  <message>File empty.txt error: attempt to read beyond EoF.</message>
-</record>
-<record>
-  <date>2018-04-22T15:32:06</date>
-  <millis>1524425526291</millis>
-  <sequence>1</sequence>
-  <logger>global</logger>
-  <level>WARNING</level>
-  <class>os.hw3.Fat32Reader</class>
-  <method>read</method>
-  <thread>1</thread>
-  <message>File const.txt error: attempt to read beyond EoF.</message>
-</record>
 </log>

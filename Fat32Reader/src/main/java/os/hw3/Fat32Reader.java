@@ -18,7 +18,7 @@ public class Fat32Reader {
     FileHandler fh;
     private String header;
     Boot boot;
-    private FAT fat;
+    //private FAT fat;
     private Directory fs;//TODO: change to currentLocation
     //private HashMap<String, Directory> openFiles;
     private String volumeName;
@@ -57,7 +57,7 @@ public class Fat32Reader {
         /* Parse boot sector and get information */
         fr.boot = new Boot(raf, fr);
         /* Create FAT table for reference */
-        fr.fat = new FAT(raf, fr, fr.getAddress(fr.boot.getBPB_RsvdSecCnt()));
+        //fr.fat = new FAT(raf, fr, fr.getAddress(fr.boot.getBPB_RsvdSecCnt()));
         //System.out.println("FAT created with size " + fr.fat.fatSize);
 
         /* Get root directory address */
@@ -241,7 +241,7 @@ public class Fat32Reader {
         {
             dir.name = byteString.trim();//lowercase?
         }
-        //System.out.println("This is the directory's name: " + dir.name);//TEST
+       //System.out.println("This is the directory's name: " + dir.name);//TEST
 
 
         byte[] DIR_Attr = new byte[1];//file attributes - 11 -> 12
@@ -255,7 +255,6 @@ public class Fat32Reader {
             temp += b;//String.format("%02X", b);
         }
         //System.out.println("attribute: " + temp);//TEST
-        //TODO: what about longname?
         if(!temp.equalsIgnoreCase("1") && !temp.equalsIgnoreCase("2") && !temp.equalsIgnoreCase("4") && !temp.equalsIgnoreCase("8") && !temp.equalsIgnoreCase("16") && !temp.equalsIgnoreCase("32"))
         {
             this.currentLocation += 20;
