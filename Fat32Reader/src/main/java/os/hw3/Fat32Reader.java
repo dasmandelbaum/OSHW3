@@ -94,18 +94,18 @@ public class Fat32Reader {
             if(inputParts.length == 2)
             {
                 String fName = inputParts[1];
-                if (command.equals("cd"))
+                if (command.equalsIgnoreCase("cd"))
                 {
                     //System.out.println("Going to cd!");
           //          fr.cd(fName, fis);
                     fr.cd(fName, raf);
                 }
-                else if (command.equals("ls"))
+                else if (command.equalsIgnoreCase("ls"))
                 {
                     //System.out.println("Going to ls.");
                     fr.ls(fName);
                 }
-                else if(command.equals("stat"))
+                else if(command.equalsIgnoreCase("stat"))
                 {
                     //System.out.println("Going to stat!");
             //        fr.stat(fName, fis);
@@ -116,24 +116,24 @@ public class Fat32Reader {
                     System.out.println("Unrecognized command.");
                 }
             }
-            else if(inputParts.length == 4 && command.equals("read"))
+            else if(inputParts.length == 4 && command.equalsIgnoreCase("read"))
             {
                 //System.out.println("Going to read!");
                 fr.read(raf, inputParts[1], inputParts[2], inputParts[3]);
             }
             else if(inputParts.length == 1)
             {
-                if (command.equals("info"))
+                if (command.equalsIgnoreCase("info"))
                 {
                     //System.out.println("Going to display info.");//TEST
                     fr.printInfo();
                 }
-                else if(command.equals("volume"))
+                else if(command.equalsIgnoreCase("volume"))
                 {
                     //System.out.println("Going to print volume.");//TEST
                     fr.volume();
                 }
-                else if (command.equals("quit"))
+                else if (command.equalsIgnoreCase("quit"))
                 {
                     //System.out.println("Quitting.");
                     break;
@@ -186,7 +186,7 @@ public class Fat32Reader {
                 newDir = new Directory();
                 if (parseCluster(raf, newDir))
                 {
-                    if(!newDir.name.equals("done"))
+                    if(!newDir.name.equalsIgnoreCase("done"))
                     {
                         newDir.parentDirectory = dir;
                         dir.files.add(newDir);
@@ -235,11 +235,11 @@ public class Fat32Reader {
         if(splitName.length == 2)
         {
             dir.name = splitName[0] + "." + splitName[1];
-            dir.name = dir.name.toLowerCase().trim();
+            dir.name = dir.name.trim();//lowercase?
         }
         else
         {
-            dir.name = byteString.toLowerCase().trim();
+            dir.name = byteString.trim();//lowercase?
         }
         //System.out.println("This is the directory's name: " + dir.name);//TEST
 
@@ -256,7 +256,7 @@ public class Fat32Reader {
         }
         //System.out.println("attribute: " + temp);//TEST
         //TODO: what about longname?
-        if(!temp.equals("1") && !temp.equals("2") && !temp.equals("4") && !temp.equals("8") && !temp.equals("16") && !temp.equals("32"))
+        if(!temp.equalsIgnoreCase("1") && !temp.equalsIgnoreCase("2") && !temp.equalsIgnoreCase("4") && !temp.equalsIgnoreCase("8") && !temp.equalsIgnoreCase("16") && !temp.equalsIgnoreCase("32"))
         {
             this.currentLocation += 20;
             raf.seek(this.currentLocation);
@@ -297,29 +297,29 @@ public class Fat32Reader {
     private void setAttribute(Directory dir, String byteString, String temp)
     {
         //System.out.println(temp);
-        if(temp.equals("1"))//root
+        if(temp.equalsIgnoreCase("1"))//root
         {
             dir.attributes = "ATTR_READ_ONLY";
         }
-        else if(temp.equals("2"))//root
+        else if(temp.equalsIgnoreCase("2"))//root
         {
             dir.attributes = "ATTR_HIDDEN";
         }
-        else if(temp.equals("4"))//root
+        else if(temp.equalsIgnoreCase("4"))//root
         {
             dir.attributes = "ATTR_SYSTEM";
         }
-        else if(temp.equals("8"))//root - TODO: Make . and .. directories and add it?
+        else if(temp.equalsIgnoreCase("8"))//root - TODO: Make . and .. directories and add it?
         {
             dir.attributes = "ATTR_VOLUME_ID";
             this.volumeName = byteString.substring(0, byteString.indexOf(" "));
         }
-        else if(temp.equals("16"))
+        else if(temp.equalsIgnoreCase("16"))
         {
             dir.attributes = "ATTR_DIRECTORY";
             dir.containsFiles = true;
         }
-        else if(temp.equals("32"))
+        else if(temp.equalsIgnoreCase("32"))
         {
             dir.attributes = "ATTR_ARCHIVE";
         }
@@ -369,7 +369,7 @@ public class Fat32Reader {
             LOGGER.log(Level.WARNING, dName + " does not exist.");
             System.out.println("Error: does not exist");
         }
-        else if(dName.equals(".."))
+        else if(dName.equalsIgnoreCase(".."))
         {
             if(this.fs.parentDirectory != null)// not in root
             {
@@ -392,7 +392,7 @@ public class Fat32Reader {
                 System.out.println("Error: already in root");
             }
         }
-        else if(dName.equals("."))
+        else if(dName.equalsIgnoreCase("."))
         {
             //stay where you are...
         }
@@ -406,12 +406,12 @@ public class Fat32Reader {
             }
             else if(dir != null)
             {
-                setHeader(getHeader() + dName + "/");
                 this.fs = dir;//now it is current working directory
                 //parse through its contents and set to current directory
                 int n = this.fs.nextClusterNumber;
                 this.fs.clusters = this.getClusters(raf, this.getFATSecNum(n), this.getFATEntOffset(n), this.fs.nextClusterNumber);
                 this.parseDirectories(raf,this.fs);
+                setHeader(getHeader() + this.fs.name + "/");
             }
             else
             {
@@ -428,12 +428,12 @@ public class Fat32Reader {
      */
     private void ls(String dName)
     {
-        if(dName.equals(".") || (dName.equals(this.fs.name)))
+        if(dName.equalsIgnoreCase(".") || (dName.equalsIgnoreCase(this.fs.name)))
         {
             //list current directory contents
             printLs(this.fs.files);
         }
-        else if(dName.equals("..") && (this.fs.parentDirectory != null))
+        else if(dName.equalsIgnoreCase("..") && (this.fs.parentDirectory != null))
         {
             printLs(this.fs.parentDirectory.files);
         }
@@ -442,7 +442,7 @@ public class Fat32Reader {
             boolean dirCheck = false;
             for(Directory dir : this.fs.files)
             {
-                if(dir.name.equals(dName))
+                if(dir.name.equalsIgnoreCase(dName))
                 {
                     printLs(dir.files);
                     dirCheck = true;
@@ -475,7 +475,7 @@ public class Fat32Reader {
     private void read(RandomAccessFile raf, String fName, String position, String num_bytes) throws IOException {
         for(Directory dir: this.fs.files)
         {
-            if(dir.name.equals(fName) && dir.containsFiles == false)//dealing with file not directory
+            if(dir.name.equalsIgnoreCase(fName) && dir.containsFiles == false)//dealing with file not directory
             {
                 if (dir.size <= 0) {
                     System.out.println("Empty file");
@@ -498,12 +498,13 @@ public class Fat32Reader {
                             //raf.seek(Integer.parseInt(position));
                             raf.read(newLine, 0, newLine.length);
                             this.currentLocation += newLine.length;
-                            if (newLine[newLine.length - 1] != 0) {
+                            if (newLine[newLine.length - 1] != 0) {//maxed out
                                 break;
                             }
                             positionInt = 0;
                         }
                         String lineString = new String(newLine, "UTF-8");
+                        //lineString = lineString.substring(0, lineString.indexOf("\n\n"));//assuming file over after two new lines
                         System.out.println(lineString);
                     } catch (Exception E) {
                         LOGGER.log(Level.WARNING, "File " + fName + " error: attempt to read beyond EoF.");
@@ -522,7 +523,7 @@ public class Fat32Reader {
      */
     private boolean exists(String fName)
     {
-        if(fName.equals("..") || this.fs.parentDirectory != null)
+        if(fName.equalsIgnoreCase("..") || this.fs.parentDirectory != null)
         {
             return true;
         }
@@ -530,7 +531,7 @@ public class Fat32Reader {
         {
             for(Directory dir: this.fs.files)
             {
-                if(dir.name.equals(fName))
+                if(dir.name.equalsIgnoreCase(fName))
                 {
                     return true;
                 }
@@ -550,7 +551,7 @@ public class Fat32Reader {
         for(Directory dir: this.fs.files)
         {
 
-            if (dir.name.equals(fName))
+            if (dir.name.equalsIgnoreCase(fName))
             {
                 if(dir.containsFiles == true)
                 {
@@ -565,18 +566,18 @@ public class Fat32Reader {
         //System.out.println("Retrieving stats.");//TEST
         //Directory dir;
         boolean dirCheck = false;
-        if(fName.equals(".") || (fName.equals(this.fs.name)))
+        if(fName.equalsIgnoreCase(".") || (fName.equalsIgnoreCase(this.fs.name)))
         {
             //list current directory contents
             printStats(this.fs);
         }
-        else if(fName.equals("..") && (this.fs.parentDirectory != null))
+        else if(fName.equalsIgnoreCase("..") && (this.fs.parentDirectory != null))
         {
             printStats(this.fs.parentDirectory);
         }
         else {
             for (Directory dir : this.fs.files) {
-                if (dir.name.equals(fName)) {
+                if (dir.name.equalsIgnoreCase(fName)) {
                     printStats(dir);
                     dirCheck = true;
                     break;
@@ -625,7 +626,7 @@ public class Fat32Reader {
         String valueString = "";
         //go to beginning of fat
         int clusterEntryAddress;
-        while(!valueString.equals("0FFFFFF8") && !valueString.equals("0FFFFFFF") && !valueString.equals("FFFFFFFF") && !valueString.equals("00000000"))
+        while(!valueString.equalsIgnoreCase("0FFFFFF8") && !valueString.equalsIgnoreCase("0FFFFFFF") && !valueString.equalsIgnoreCase("FFFFFFFF") && !valueString.equalsIgnoreCase("00000000"))
         {
             valueString = "";
             //System.out.println("FatSecNum: " + fatSecNum);
@@ -643,7 +644,7 @@ public class Fat32Reader {
             }
             //System.out.println("Value in string: " + valueString);
             int clusterNum = Integer.parseInt(valueString, 16);
-            if(!valueString.equals("0FFFFFF8") && !valueString.equals("0FFFFFFF") && !valueString.equals("FFFFFFFF") && !valueString.equals("00000000"))
+            if(!valueString.equalsIgnoreCase("0FFFFFF8") && !valueString.equalsIgnoreCase("0FFFFFFF") && !valueString.equalsIgnoreCase("FFFFFFFF") && !valueString.equalsIgnoreCase("00000000"))
             {
                // System.out.println("Cluster number: " + clusterNum);
                 clusters.add(clusterNum);
