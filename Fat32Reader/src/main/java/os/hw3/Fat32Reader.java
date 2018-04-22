@@ -485,11 +485,12 @@ public class Fat32Reader {
                         //take file contents and print them out
                         int positionInt = Integer.parseInt(position);
                         int n = dir.nextClusterNumber;
-                       // System.out.println("NextClusterNumber is: " + n);
+                        //System.out.println("NextClusterNumber is: " + n);
                         dir.clusters = this.getClusters(raf, this.getFATSecNum(n), this.getFATEntOffset(n), n);
                         byte[] newLine = new byte[Integer.parseInt(num_bytes)];
                         //System.out.println(newLine[newLine.length - 1]);
-                        for (int i : dir.clusters) {
+                        for (int i : dir.clusters)
+                        {
                             int clusterAddress = this.boot.getRootDirAddress() + i - this.boot.getBPB_RootClus();
                             clusterAddress = getAddress(clusterAddress) + positionInt;
                             raf.seek(clusterAddress);
@@ -646,16 +647,12 @@ public class Fat32Reader {
             int clusterNum = Integer.parseInt(valueString, 16);
             if(!valueString.equalsIgnoreCase("0FFFFFF8") && !valueString.equalsIgnoreCase("0FFFFFFF") && !valueString.equalsIgnoreCase("FFFFFFFF") && !valueString.equalsIgnoreCase("00000000"))
             {
-               // System.out.println("Cluster number: " + clusterNum);
+                //System.out.println("Cluster number: " + clusterNum);
                 clusters.add(clusterNum);
             }
             else
             {
                 clusters.add(0, firstClusterNumber);
-            }
-            if(clusterNum == 35)
-            {
-                break;
             }
             //fatSecNum = getFATSecNum(clusterNum);
             fatEntOffset = getFATEntOffset(clusterNum);
