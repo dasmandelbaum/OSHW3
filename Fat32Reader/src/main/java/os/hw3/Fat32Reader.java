@@ -96,12 +96,7 @@ public class Fat32Reader {
             if(inputParts.length == 2)
             {
                 String fName = inputParts[1];
-                if (command.equals("size"))
-                {
-                    System.out.println("Going to size!");
-                    fr.size(fName);
-                }
-                else if (command.equals("cd"))
+                if (command.equals("cd"))
                 {
                     System.out.println("Going to cd!");
           //          fr.cd(fName, fis);
@@ -275,6 +270,7 @@ public class Fat32Reader {
         String clus = hi.concat(lo);
         //System.out.println("Cluster value: " + clus);//TEST
         dir.nextClusterNumber = Integer.parseInt(clus, 16);
+       // if()
         //System.out.println("next cluster number: 0x" + Integer.toHexString(dir.nextClusterNumber));//TEST
 
         byte[] DIR_FileSize = new byte[4];//32-bit DWORD holding this file’s size in bytes. - 28-32
@@ -354,24 +350,6 @@ public class Fat32Reader {
     }
 
     /**
-     * prints the size of file FILE_NAME in the present working directory.
-     * Log an error if FILE_NAME does not exist.
-     * @param fName
-     */
-    private void size(String fName)
-    {
-        if(exists(fName))
-        {
-            //print size
-        }
-        else
-        {
-            LOGGER.log(Level.WARNING,"File " + fName + " does not exist.");
-            System.out.println("Error: file does not exist");
-        }
-    }
-
-    /**
      * changes the present working directory to DIR_NAME.
      * Log an error if the directory does not exist.
      * DIR_NAME may be “.” (here) and “..” (up one directory).
@@ -386,21 +364,27 @@ public class Fat32Reader {
         }
         else if(dName.equals(".."))
         {
-            this.fs = this.fs.parentDirectory;
-            //check if cd .. is root directory
-        		if(this.fs.parentDirectory == null) {
-        			setHeader("/");
-        		}
-        		else {
-	            //go to the "/" after the parent directory
-	            int parentDirectoryIndex = getHeader().indexOf(this.fs.name) + this.fs.name.length() +1 ;
-	            String test = getHeader().substring(0, parentDirectoryIndex);
-	            setHeader(test);
-        		}
+            if(this.fs.parentDirectory != null)//must be in root
+            {
+                this.fs = this.fs.parentDirectory;
+                //check if cd .. is root directory
+                if (this.fs.parentDirectory == null) {
+                    setHeader("/");
+                } else {
+                    //go to the "/" after the parent directory
+                    int parentDirectoryIndex = getHeader().indexOf(this.fs.name) + this.fs.name.length() + 1;
+                    String name = getHeader().substring(0, parentDirectoryIndex);
+                    setHeader(name);
+                }
+            }
+            else
+            {
+                System.out.println("Error: already in root");
+            }
         }
         else if(dName.equals("."))
         {
-
+            //stay where you are...
         }
         else
         {
@@ -412,7 +396,6 @@ public class Fat32Reader {
                 //parse through its contents and set to current directory
                 int n = this.fs.nextClusterNumber;
                 this.fs.clusters = this.getClusters(raf, this.getFATSecNum(n), this.getFATEntOffset(n), this.fs.nextClusterNumber);
-                this.fs.clusters.add(this.fs.nextClusterNumber);
                 this.parseDirectories(raf,this.fs);
             }
 
@@ -619,7 +602,7 @@ public class Fat32Reader {
 
     int getFATEntOffset(int n)
     {
-        return ((n * 4)  % this.boot.getBPB_BytesPerSec());
+        return ((n * 4));//  % this.boot.getBPB_BytesPerSec());
     }
 
     private ArrayList<Integer> getClusters(RandomAccessFile raf, int fatSecNum, int fatEntOffset, int firstClusterNumber) throws IOException
@@ -629,12 +612,12 @@ public class Fat32Reader {
         String valueString = "";
         //go to beginning of fat
         int clusterEntryAddress;
-        while(!valueString.equals("0FFFFFF8") && !valueString.equals("0FFFFFFF") && !valueString.equals("FFFFFFFF"))
+        while(!valueString.equals("0FFFFFF8") && !valueString.equals("0FFFFFFF") && !valueString.equals("FFFFFFFF") && !valueString.equals("00000000"))
         {
             valueString = "";
             //System.out.println("FatSecNum: " + fatSecNum);
             System.out.println("FatEntryOffest: " + fatEntOffset);
-            clusterEntryAddress = getAddress(fatSecNum) + fatEntOffset;// (fatSecNum * 4);
+            clusterEntryAddress = getAddress(fatSecNum) + fatEntOffset;
             System.out.println("Address of fat entry: " + Integer.toHexString(clusterEntryAddress));
             raf.seek(clusterEntryAddress);//clusterEntryAddress);
             raf.read(value, 0, 4);
@@ -647,7 +630,7 @@ public class Fat32Reader {
             }
             System.out.println("Value in string: " + valueString);
             int clusterNum = Integer.parseInt(valueString, 16);
-            if(!valueString.equals("0FFFFFF8") && !valueString.equals("0FFFFFFF") && !valueString.equals("FFFFFFFF"))
+            if(!valueString.equals("0FFFFFF8") && !valueString.equals("0FFFFFFF") && !valueString.equals("FFFFFFFF") && !valueString.equals("00000000"))
             {
                 System.out.println("Cluster number: " + clusterNum);
                 clusters.add(clusterNum);
@@ -655,6 +638,10 @@ public class Fat32Reader {
             else
             {
                 clusters.add(0, firstClusterNumber);
+            }
+            if(clusterNum == 35)
+            {
+                break;
             }
             //fatSecNum = getFATSecNum(clusterNum);
             fatEntOffset = getFATEntOffset(clusterNum);
