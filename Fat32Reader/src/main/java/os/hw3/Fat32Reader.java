@@ -477,43 +477,52 @@ public class Fat32Reader {
         {
             if(dir.name.equalsIgnoreCase(fName) && dir.containsFiles == false)//dealing with file not directory
             {
-                if (dir.size <= 0) {
-                    System.out.println("Empty file");
-                } else {
-                    //read file
-                    try {
-                        //take file contents and print them out
-                        int positionInt = Integer.parseInt(position);
-                        int n = dir.nextClusterNumber;
-                        //System.out.println("NextClusterNumber is: " + n);
-                        dir.clusters = this.getClusters(raf, this.getFATSecNum(n), this.getFATEntOffset(n), n);
-                        byte[] newLine = new byte[Integer.parseInt(num_bytes)];
-                        //System.out.println(newLine[newLine.length - 1]);
-                        for (int i : dir.clusters)
-                        {
-                            int clusterAddress = this.boot.getRootDirAddress() + i - this.boot.getBPB_RootClus();
-                            clusterAddress = getAddress(clusterAddress) + positionInt;
-                            raf.seek(clusterAddress);
-                            this.currentLocation = clusterAddress;
-                           // System.out.println("Accessing cluster address " + Integer.toHexString(clusterAddress) + " from cluster " + i);
-                            //raf.seek(Integer.parseInt(position));
-                            raf.read(newLine, 0, newLine.length);
-                            this.currentLocation += newLine.length;
-                            if (newLine[newLine.length - 1] != 0) {//maxed out
-                                break;
-                            }
-                            positionInt = 0;
+                //read file
+                try {
+                    //take file contents and print them out
+                    int positionInt = Integer.parseInt(position);
+                    int numbytesInt = Integer.parseInt(num_bytes);
+                    int n = dir.nextClusterNumber;
+                    //System.out.println("NextClusterNumber is: " + n);
+                    dir.clusters = this.getClusters(raf, this.getFATSecNum(n), this.getFATEntOffset(n), n);
+                    byte[] newLine;
+                    if(dir.size < positionInt + numbytesInt)
+                    {
+                        newLine = new byte[dir.size - positionInt];
+                    }
+                    else
+                    {
+                        newLine = new byte[numbytesInt];
+                    }
+                    //System.out.println(newLine[newLine.length - 1]);
+                    for (int i : dir.clusters)
+                    {
+                        int clusterAddress = this.boot.getRootDirAddress() + i - this.boot.getBPB_RootClus();
+                        clusterAddress = getAddress(clusterAddress) + positionInt;
+                        raf.seek(clusterAddress);
+                        this.currentLocation = clusterAddress;
+                       // System.out.println("Accessing cluster address " + Integer.toHexString(clusterAddress) + " from cluster " + i);
+                        //raf.seek(Integer.parseInt(position));
+                        raf.read(newLine, 0, newLine.length);
+                        this.currentLocation += newLine.length;
+                        if (newLine[newLine.length - 1] != 0) {//maxed out
+                            break;
                         }
-                        String lineString = new String(newLine, "UTF-8");
-                        //lineString = lineString.substring(0, lineString.indexOf("\n\n"));//assuming file over after two new lines
-                        System.out.println(lineString);
-                    } catch (Exception E) {
+                        positionInt = 0;
+                    }
+                    String lineString = new String(newLine, "UTF-8");
+                    //lineString = lineString.substring(0, lineString.indexOf("\n\n"));//assuming file over after two new lines
+                    System.out.println(lineString);
+                    if(dir.size < positionInt + numbytesInt)
+                    {
                         LOGGER.log(Level.WARNING, "File " + fName + " error: attempt to read beyond EoF.");
                         System.out.println("Error: attempt to read beyond EoF");
                     }
+                } catch (Exception E) {
+                    LOGGER.log(Level.WARNING, "File " + fName + " error: attempt to read beyond EoF.");
+                    System.out.println("Error: attempt to read beyond EoF");
                 }
             }
-
         }
     }
 
