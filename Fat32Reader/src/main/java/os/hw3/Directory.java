@@ -3,7 +3,7 @@ package os.hw3;
 import java.util.ArrayList;
 
 /**
- * Represents a directory file within a FAT32 file system.
+ * Represents a directory within a FAT32 file system.
  * Author: Jeffrey Hagler, David Mandelbaum
  */
 public class Directory

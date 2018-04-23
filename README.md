@@ -5,7 +5,6 @@
   * Fat32Reader class - main command center for parsing file and user-run navigation
   * Boot class - used for info command
   * Directory class - represents directly (tree node-like)
-  * FAT class - 
   * Log file prints errors in longer format than will appear on the screen
 
 ## Commands that work
@@ -22,7 +21,7 @@
  2. Navigate into Fat32Reader folder
  3. Run the following command (with maven) from the Fat32Reader folder:
 ```
-    maven clean install
+    mvn clean install
 ```
  4. Run the following command to boot up the shell:
  
