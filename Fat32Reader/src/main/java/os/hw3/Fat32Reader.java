@@ -391,19 +391,25 @@ public class Fat32Reader {
                 System.out.println("Error: already in root");
             }
         }
-        else if(dName.equalsIgnoreCase("."))
+        else if(dName.equalsIgnoreCase(".") || (dName.equalsIgnoreCase(this.fs.name)))
         {
             //stay where you are...
         }
         else //move into new directory
         {
             Directory dir = isDirectory(dName, raf);
-            if(dir.clusters.size() > 0) //already parsed
+            if(dir == null)
+            {
+                LOGGER.log(Level.WARNING, dName + " is not a directory.");
+                System.out.println("Error: not a directory");
+            }
+            else if(dir.clusters.size() > 0) //already parsed
             {
                 this.fs = dir;
                 setHeader(getHeader() +  this.fs.name + "/");
             }
-            else if(dir != null)
+
+            else// if(dir != null)
             {
                 this.fs = dir;//now it is current working directory
                 //parse through its contents and set to current directory
@@ -412,11 +418,7 @@ public class Fat32Reader {
                 this.parseDirectories(raf,this.fs);
                 setHeader(getHeader() + this.fs.name + "/");
             }
-            else
-            {
-                LOGGER.log(Level.WARNING, dName + " is not a directory.");
-                System.out.println("Error: not a directory");
-            }
+
         }
     }
 

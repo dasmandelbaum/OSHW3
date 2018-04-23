@@ -21,14 +21,14 @@
  1. Open the zip.
  2. Navigate into Fat32Reader folder
  3. Run the following command (with maven) from the Fat32Reader folder:
-    ```
-        maven clean install
-        ```
+```
+    maven clean install
+```
  4. Run the following command to boot up the shell:
  
-    ```
-        java -cp .:./target/Fat32Reader-1.0-SNAPSHOT.jar os.hw3.Fat32Reader "fat32.img" 
-        ```     
+```
+    java -cp .:./target/Fat32Reader-1.0-SNAPSHOT.jar os.hw3.Fat32Reader "fat32.img" 
+```     
  5. Start inputting commands and navigate, read and quit to your heart's content.
  
 ##	Notes
